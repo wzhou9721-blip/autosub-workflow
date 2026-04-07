@@ -1,0 +1,16 @@
+# 术语表格式示例
+# 请严格按照以下格式编写术语表（TXT文件）：
+# 原文 = 译文
+# 每行一条，支持中文和英文
+
+# 示例：
+Quantum Mechanics = 量子力学
+Superposition = 叠加态
+Wave Function = 波函数
+Schrödinger's Cat = 薛定谔的猫
+General Relativity = 广义相对论
+
+# 注意事项：
+# 1. 等号两侧的空格会被忽略
+# 2. 以 # 开头的行会被视为注释
+# 3. 术语表将强制约束 AI 的翻译结果

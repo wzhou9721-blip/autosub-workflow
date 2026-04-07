@@ -1,0 +1,27 @@
+.venv/
+.codex/
+
+# Workspace notes and local tooling state
+.trae/
+
+# Python cache and logs
+**/__pycache__/
+*.pyc
+*.pyo
+*.log
+
+# AutoSub packaged artifacts and local runtime data
+AutoSub/build/
+AutoSub/dist/
+AutoSub/models/
+AutoSub/bin/
+AutoSub/error.log
+AutoSub/temp_batch_session_state.json
+AutoSub/temp_split_resume.json
+AutoSub/temp_translate_resume_*.json
+AutoSub/temp_overflow_resume_*.json
+AutoSub/regression_report.txt
+
+# Common editor / OS noise
+.DS_Store
+Thumbs.db

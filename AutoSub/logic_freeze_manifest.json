@@ -1,0 +1,62 @@
+{
+  "generated_at": 1772611032,
+  "python": "3.12.8 (tags/v3.12.8:2dc476b, Dec  3 2024, 19:30:04) [MSC v.1942 64 bit (AMD64)]",
+  "smoke_checklist_exists": true,
+  "regression_passed": true,
+  "files": [
+    {
+      "file": "app/common/thread.py",
+      "sha256": "9915624d2f9ee308b47a7e39cc15c7517a9e0b9018ee5f42f9343b34eb479d67",
+      "size": 78751,
+      "mtime": 1772604795
+    },
+    {
+      "file": "app/core/llm.py",
+      "sha256": "81c813a8eab990f8299f55f42afa7b5e7ae94c3ddb1b8b6e06a38def8d9052c6",
+      "size": 48399,
+      "mtime": 1772604795
+    },
+    {
+      "file": "app/core/transcriber.py",
+      "sha256": "b03c56605b7783fae3d6ba02e0c9b41df9334d986f79275f69a5c9837e109af1",
+      "size": 34810,
+      "mtime": 1772608046
+    },
+    {
+      "file": "app/view/setting_task_interface.py",
+      "sha256": "700d93bc202bea8e00071fe86339a6afa4b6904fe581f79f9031843b3869c3ab",
+      "size": 35378,
+      "mtime": 1772610896
+    },
+    {
+      "file": "app/view/transcribe_interface.py",
+      "sha256": "ef28b1518c0bd98b123d4fcff2c236c4c6a57e9271aa166674596ce96192bede",
+      "size": 32845,
+      "mtime": 1772610409
+    },
+    {
+      "file": "app/view/translation_interface.py",
+      "sha256": "8c59fdfc2e16d319f8afb499aa686214bd8b304af56a044dc600e2c1492d9454",
+      "size": 96121,
+      "mtime": 1772610903
+    },
+    {
+      "file": "app/view/setting_interface.py",
+      "sha256": "1225f44eb89bbc22645f5757a668f2f3c6a784a7da2e37838f58c5fb66b0c0e2",
+      "size": 39826,
+      "mtime": 1772610298
+    },
+    {
+      "file": "app/common/config.py",
+      "sha256": "fc48f690bf3df5b38268177bf4cae3faa26943257a98b5f324b1449c1085a391",
+      "size": 9279,
+      "mtime": 1772608046
+    },
+    {
+      "file": "requirements.txt",
+      "sha256": "126a70a15ab0b7b4744ec0f6cfcaaf5bbd03b639ebe4de68c5ee7280cfa562c0",
+      "size": 158,
+      "mtime": 1772604795
+    }
+  ]
+}
