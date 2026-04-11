@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-import json
 import asyncio
-from typing import Any
+import json
+from typing import Any, Callable
 
 import requests
 
@@ -149,12 +149,22 @@ class ExternalTranslationClient:
 
 
 class RealtimeTranslationCoordinator:
-    def __init__(self, client: ExternalTranslationClient, store: TranscriptStore, target_language: str) -> None:
+    def __init__(
+        self,
+        client: ExternalTranslationClient,
+        store: TranscriptStore,
+        target_language: str,
+        on_translation: Callable[[str, str], None] | None = None,
+    ) -> None:
         self.client = client
         self.store = store
         self.target_language = target_language
+        self.on_translation = on_translation
         self._tasks: set[asyncio.Task[None]] = set()
         self._semaphore = asyncio.Semaphore(1)
+        self._pending_batch: list[tuple[str, dict[str, Any]]] = []
+        self._batch_lock = asyncio.Lock()
+        self._batch_size = max(1, self.client.settings.translation_frequency)
 
     def submit(self, utterance_id: str, utterance: dict[str, Any]) -> None:
         if not clean_text(utterance.get("text")):
@@ -162,7 +172,7 @@ class RealtimeTranslationCoordinator:
         if utterance_id in self.store.translation_by_utterance_id:
             return
 
-        task = asyncio.create_task(self._translate_one(utterance_id, utterance))
+        task = asyncio.create_task(self._enqueue_and_maybe_translate(utterance_id, utterance))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 
@@ -173,6 +183,7 @@ class RealtimeTranslationCoordinator:
 
     async def backfill_missing(self, utterances: list[dict[str, Any]]) -> list[str]:
         await self.wait_for_pending()
+        await self._flush_pending_batch()
 
         missing_indices: list[int] = []
         missing_utterances: list[dict[str, Any]] = []
@@ -205,27 +216,50 @@ class RealtimeTranslationCoordinator:
                         "end": utterance.get("end"),
                     },
                 )
+                if self.on_translation is not None:
+                    self.on_translation(utterance_id, translated_text)
                 final_texts[missing_indices[batch_index]] = translated_text
 
         return final_texts
 
-    async def _translate_one(self, utterance_id: str, utterance: dict[str, Any]) -> None:
-        async with self._semaphore:
-            translated_list = await asyncio.to_thread(self.client.translate_utterances, [utterance])
+    async def _enqueue_and_maybe_translate(self, utterance_id: str, utterance: dict[str, Any]) -> None:
+        should_flush = False
+        async with self._batch_lock:
+            self._pending_batch.append((utterance_id, utterance))
+            should_flush = len(self._pending_batch) >= self._batch_size
 
-        translated_text = clean_text(translated_list[0] if translated_list else "") or clean_text(
-            utterance.get("text")
-        )
-        self.store.store_translation(
-            utterance_id,
-            {
-                "text": translated_text,
-                "language": self.target_language,
-                "start": utterance.get("start"),
-                "end": utterance.get("end"),
-            },
-        )
-        emit_runtime_message(f"[FINAL][ZH] {translated_text}")
+        if should_flush:
+            await self._flush_pending_batch()
+
+    async def _flush_pending_batch(self) -> None:
+        async with self._batch_lock:
+            if not self._pending_batch:
+                return
+            batch = self._pending_batch[:]
+            self._pending_batch.clear()
+
+        async with self._semaphore:
+            translated_list = await asyncio.to_thread(
+                self.client.translate_utterances,
+                [utterance for _, utterance in batch],
+            )
+
+        for index, (utterance_id, utterance) in enumerate(batch):
+            translated_text = clean_text(translated_list[index] if index < len(translated_list) else "") or clean_text(
+                utterance.get("text")
+            )
+            self.store.store_translation(
+                utterance_id,
+                {
+                    "text": translated_text,
+                    "language": self.target_language,
+                    "start": utterance.get("start"),
+                    "end": utterance.get("end"),
+                },
+            )
+            emit_runtime_message(f"[FINAL][ZH] {translated_text}")
+            if self.on_translation is not None:
+                self.on_translation(utterance_id, translated_text)
 
     @staticmethod
     def _utterance_id(utterance: dict[str, Any]) -> str:

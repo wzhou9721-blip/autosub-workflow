@@ -29,6 +29,7 @@ class RuntimeOptions:
     dual_language_enabled: bool = False
     secondary_language: str = "zh"
     denoise_enabled: bool = False
+    translation_frequency: int = 1
 
     def build_source_languages(self) -> list[str]:
         codes: list[str] = []
@@ -47,7 +48,8 @@ class RuntimeOptions:
         return (
             f"语言={language_text}; "
             f"双语言={'开启' if self.dual_language_enabled else '关闭'}; "
-            f"降噪={'开启' if self.denoise_enabled else '关闭'}"
+            f"降噪={'开启' if self.denoise_enabled else '关闭'}; "
+            f"翻译频率={max(1, self.translation_frequency)}"
         )
 
 
@@ -57,6 +59,10 @@ class SessionCallbacks:
     on_status: Callable[[str], None] | None = None
     on_finished: Callable[[Path, Path], None] | None = None
     on_error: Callable[[str], None] | None = None
+    on_partial: Callable[[str], None] | None = None
+    on_final_source: Callable[[str, str], None] | None = None
+    on_final_translation: Callable[[str, str], None] | None = None
+    on_audio_level: Callable[[float], None] | None = None
 
 
 class SessionRunner:
@@ -70,6 +76,7 @@ class SessionRunner:
             source_languages=runtime_options.build_source_languages(),
             code_switching=runtime_options.dual_language_enabled,
             audio_enhancer=runtime_options.denoise_enabled,
+            translation_frequency=max(1, runtime_options.translation_frequency),
         )
         try:
             asyncio.run(self._run_async(settings, stop_signal, runtime_options))
@@ -96,6 +103,7 @@ class SessionRunner:
                 client=translation_client,
                 store=transcript_store,
                 target_language=settings.target_language,
+                on_translation=self.callbacks.on_final_translation,
             )
             if translation_client is not None
             else None
@@ -104,6 +112,9 @@ class SessionRunner:
             settings=settings,
             transcript_store=transcript_store,
             on_final_transcript=translation_coordinator.submit if translation_coordinator is not None else None,
+            on_partial_transcript=self.callbacks.on_partial,
+            on_final_source=self.callbacks.on_final_source,
+            on_translation=self.callbacks.on_final_translation if translation_coordinator is None else None,
         )
         capture = SystemAudioCapture(
             AudioChunkConfig(
@@ -123,7 +134,14 @@ class SessionRunner:
             log_info(f"session started: {session.session_id}")
             self._status("running")
 
-            stream_task = asyncio.create_task(gladia_client.stream_audio(session, capture, stop_signal))
+            stream_task = asyncio.create_task(
+                gladia_client.stream_audio(
+                    session,
+                    capture,
+                    stop_signal,
+                    on_audio_level=self.callbacks.on_audio_level,
+                )
+            )
             stop_task = asyncio.create_task(asyncio.to_thread(stop_signal.wait))
 
             done, pending = await asyncio.wait(
@@ -181,6 +199,8 @@ class SessionRunner:
             if self.callbacks.on_finished is not None:
                 self.callbacks.on_finished(settings.output_srt_path, settings.output_json_path)
         finally:
+            if self.callbacks.on_audio_level is not None:
+                self.callbacks.on_audio_level(0.0)
             set_runtime_message_listener(None)
             capture.close()
             gladia_client.close()

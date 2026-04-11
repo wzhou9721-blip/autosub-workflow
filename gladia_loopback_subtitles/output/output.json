@@ -1,18 +1,18 @@
 {
-  "id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
-  "request_id": "G-145a444d",
+  "id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+  "request_id": "G-499d0555",
   "version": 2,
   "status": "done",
-  "created_at": "2026-04-11T10:53:28.808Z",
-  "completed_at": "2026-04-11T10:53:59.114Z",
+  "created_at": "2026-04-11T14:17:23.382Z",
+  "completed_at": "2026-04-11T14:18:21.028Z",
   "custom_metadata": null,
   "error_code": null,
   "kind": "live",
   "file": {
-    "id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
-    "filename": "145a444d-54cf-4d87-b2d7-6c367bf1c62a.wav",
+    "id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+    "filename": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf.wav",
     "source": null,
-    "audio_duration": 28,
+    "audio_duration": 55,
     "number_of_channels": 1
   },
   "request_params": {
@@ -28,9 +28,7 @@
       "speech_threshold": 0.6
     },
     "language_config": {
-      "languages": [
-        "en"
-      ],
+      "languages": [],
       "code_switching": false
     },
     "messages_config": {
@@ -62,10 +60,10 @@
   },
   "result": {
     "metadata": {
-      "audio_duration": 28,
-      "billing_time": 28,
+      "audio_duration": 55,
+      "billing_time": 55,
       "number_of_distinct_channels": 1,
-      "transcription_time": 30.306
+      "transcription_time": 57.646
     },
     "transcription": {
       "languages": [
@@ -73,397 +71,927 @@
       ],
       "utterances": [
         {
-          "text": "The AFC Under-20 Women Asian Cup.",
-          "start": 2.888,
-          "end": 5.343,
+          "text": "The AFC Under-20 Women Asian Cup Thailand 2026",
+          "start": 0.601,
+          "end": 4.788,
           "language": "en",
-          "confidence": 0.9349999999999999,
+          "confidence": 0.81125,
           "channel": 0,
           "words": [
             {
               "word": "The",
-              "start": 2.888,
-              "end": 3.008,
+              "start": 0.601,
+              "end": 0.721,
               "confidence": 0.98
             },
             {
               "word": " AFC",
-              "start": 3.089,
-              "end": 3.411,
-              "confidence": 0.98
-            },
-            {
-              "word": " Under-20",
-              "start": 3.773,
-              "end": 3.975,
+              "start": 0.801,
+              "end": 1.142,
               "confidence": 0.99
             },
             {
+              "word": " Under-20",
+              "start": 1.502,
+              "end": 1.703,
+              "confidence": 1
+            },
+            {
               "word": " Women",
-              "start": 4.518,
-              "end": 4.74,
-              "confidence": 0.95
+              "start": 2.223,
+              "end": 2.464,
+              "confidence": 1
             },
             {
               "word": " Asian",
-              "start": 4.82,
-              "end": 5.062,
-              "confidence": 0.94
+              "start": 2.544,
+              "end": 2.784,
+              "confidence": 0.91
             },
             {
-              "word": " Cup.",
-              "start": 5.142,
-              "end": 5.343,
-              "confidence": 0.77
+              "word": " Cup",
+              "start": 2.844,
+              "end": 3.065,
+              "confidence": 0.85
+            },
+            {
+              "word": " Thailand",
+              "start": 3.365,
+              "end": 3.846,
+              "confidence": 0.74
+            },
+            {
+              "word": " 2026",
+              "start": 3.847,
+              "end": 4.788,
+              "confidence": 0.02
             }
           ]
         },
         {
-          "text": "Thailand 2026 enters the business end with the quarterfinals to be played over the weekend.",
-          "start": 5.647,
-          "end": 10.995,
+          "text": "enters the business end with the quarterfinals to be played over the weekend.",
+          "start": 5.371,
+          "end": 8.747,
           "language": "en",
-          "confidence": 0.8706666666666667,
+          "confidence": 0.9146153846153846,
           "channel": 0,
           "words": [
             {
-              "word": " Thailand",
-              "start": 5.647,
-              "end": 6.108,
-              "confidence": 0.63
-            },
-            {
-              "word": " 2026",
-              "start": 6.109,
-              "end": 7.049,
-              "confidence": 0
-            },
-            {
               "word": " enters",
-              "start": 7.65,
-              "end": 7.891,
-              "confidence": 1
+              "start": 5.371,
+              "end": 5.612,
+              "confidence": 0.49
             },
             {
               "word": " the",
-              "start": 7.892,
-              "end": 8.011,
-              "confidence": 0.95
+              "start": 5.613,
+              "end": 5.733,
+              "confidence": 0.98
             },
             {
               "word": " business",
-              "start": 8.031,
-              "end": 8.351,
-              "confidence": 1
+              "start": 5.753,
+              "end": 6.074,
+              "confidence": 0.96
             },
             {
               "word": " end",
-              "start": 8.451,
-              "end": 8.652,
-              "confidence": 1
+              "start": 6.195,
+              "end": 6.376,
+              "confidence": 0.92
             },
             {
               "word": " with",
-              "start": 8.772,
-              "end": 8.892,
-              "confidence": 1
+              "start": 6.496,
+              "end": 6.617,
+              "confidence": 0.98
             },
             {
               "word": " the",
-              "start": 8.893,
-              "end": 8.992,
-              "confidence": 0.99
+              "start": 6.637,
+              "end": 6.717,
+              "confidence": 0.97
             },
             {
               "word": " quarterfinals",
-              "start": 8.993,
-              "end": 9.753,
-              "confidence": 0.66
+              "start": 6.738,
+              "end": 7.501,
+              "confidence": 0.69
             },
             {
               "word": " to",
-              "start": 9.773,
-              "end": 9.893,
+              "start": 7.503,
+              "end": 7.622,
               "confidence": 1
             },
             {
               "word": " be",
-              "start": 9.894,
-              "end": 9.993,
+              "start": 7.623,
+              "end": 7.722,
               "confidence": 1
             },
             {
               "word": " played",
-              "start": 10.014,
-              "end": 10.294,
+              "start": 7.742,
+              "end": 8.024,
               "confidence": 0.99
             },
             {
               "word": " over",
-              "start": 10.314,
-              "end": 10.454,
-              "confidence": 1
+              "start": 8.044,
+              "end": 8.185,
+              "confidence": 0.99
             },
             {
               "word": " the",
-              "start": 10.455,
-              "end": 10.574,
-              "confidence": 0.85
+              "start": 8.205,
+              "end": 8.305,
+              "confidence": 0.93
             },
             {
               "word": " weekend.",
-              "start": 10.575,
-              "end": 10.995,
+              "start": 8.306,
+              "end": 8.747,
               "confidence": 0.99
             }
           ]
         },
         {
           "text": "All four ties promise to be scintillating affairs.",
-          "start": 12.14,
-          "end": 14.678,
+          "start": 9.88,
+          "end": 12.418,
           "language": "en",
-          "confidence": 0.94625,
+          "confidence": 0.91625,
           "channel": 0,
           "words": [
             {
               "word": " All",
-              "start": 12.14,
-              "end": 12.301,
-              "confidence": 0.99
+              "start": 9.88,
+              "end": 10.021,
+              "confidence": 0.98
             },
             {
               "word": " four",
-              "start": 12.401,
-              "end": 12.603,
-              "confidence": 0.98
-            },
-            {
-              "word": " ties",
-              "start": 12.663,
-              "end": 13.046,
+              "start": 10.121,
+              "end": 10.323,
               "confidence": 0.88
             },
             {
+              "word": " ties",
+              "start": 10.383,
+              "end": 10.766,
+              "confidence": 0.87
+            },
+            {
               "word": " promise",
-              "start": 13.106,
-              "end": 13.389,
-              "confidence": 0.98
+              "start": 10.826,
+              "end": 11.129,
+              "confidence": 0.99
             },
             {
               "word": " to",
-              "start": 13.39,
-              "end": 13.509,
+              "start": 11.13,
+              "end": 11.229,
               "confidence": 0.99
             },
             {
               "word": " be",
-              "start": 13.51,
-              "end": 13.61,
-              "confidence": 0.99
+              "start": 11.23,
+              "end": 11.33,
+              "confidence": 1
             },
             {
               "word": " scintillating",
-              "start": 13.691,
-              "end": 14.275,
-              "confidence": 0.77
+              "start": 11.411,
+              "end": 11.995,
+              "confidence": 0.7
             },
             {
               "word": " affairs.",
-              "start": 14.295,
-              "end": 14.678,
-              "confidence": 0.99
+              "start": 12.015,
+              "end": 12.418,
+              "confidence": 0.92
             }
           ]
         },
         {
           "text": "after an exciting group stage which saw thrills, spills and more.",
-          "start": 15.261,
-          "end": 19.097,
+          "start": 12.98,
+          "end": 16.814,
           "language": "en",
-          "confidence": 0.9118181818181817,
+          "confidence": 0.9381818181818182,
           "channel": 0,
           "words": [
             {
               "word": " after",
-              "start": 15.261,
-              "end": 15.461,
+              "start": 12.98,
+              "end": 13.181,
               "confidence": 1
             },
             {
               "word": " an",
-              "start": 15.462,
-              "end": 15.562,
+              "start": 13.201,
+              "end": 13.281,
               "confidence": 1
             },
             {
               "word": " exciting",
-              "start": 15.563,
-              "end": 16.024,
-              "confidence": 0.98
+              "start": 13.282,
+              "end": 13.763,
+              "confidence": 0.96
             },
             {
               "word": " group",
-              "start": 16.064,
-              "end": 16.265,
-              "confidence": 1
+              "start": 13.803,
+              "end": 13.984,
+              "confidence": 0.97
             },
             {
               "word": " stage",
-              "start": 16.325,
-              "end": 16.687,
-              "confidence": 0.98
-            },
-            {
-              "word": " which",
-              "start": 16.868,
-              "end": 17.028,
+              "start": 14.044,
+              "end": 14.405,
               "confidence": 0.99
             },
             {
+              "word": " which",
+              "start": 14.606,
+              "end": 14.746,
+              "confidence": 1
+            },
+            {
               "word": " saw",
-              "start": 17.089,
-              "end": 17.229,
-              "confidence": 0.87
+              "start": 14.806,
+              "end": 14.947,
+              "confidence": 0.86
             },
             {
               "word": " thrills,",
-              "start": 17.35,
-              "end": 17.792,
+              "start": 15.067,
+              "end": 15.529,
               "confidence": 0.89
             },
             {
               "word": " spills",
-              "start": 18.033,
-              "end": 18.515,
-              "confidence": 0.9
+              "start": 15.75,
+              "end": 16.232,
+              "confidence": 0.96
             },
             {
               "word": " and",
-              "start": 18.716,
-              "end": 18.856,
-              "confidence": 0.71
+              "start": 16.452,
+              "end": 16.573,
+              "confidence": 0.99
             },
             {
               "word": " more.",
-              "start": 18.896,
-              "end": 19.097,
-              "confidence": 0.71
+              "start": 16.613,
+              "end": 16.814,
+              "confidence": 0.7
             }
           ]
         },
         {
           "text": "Join theafc.com in our preview of the quarterfinals.",
-          "start": 20.18,
-          "end": 23.38,
+          "start": 17.897,
+          "end": 21.097,
           "language": "en",
-          "confidence": 0.91125,
+          "confidence": 0.935,
           "channel": 0,
           "words": [
             {
               "word": " Join",
-              "start": 20.18,
-              "end": 20.382,
-              "confidence": 0.94
+              "start": 17.897,
+              "end": 18.119,
+              "confidence": 0.96
             },
             {
               "word": " theafc.com",
-              "start": 20.422,
-              "end": 21.428,
-              "confidence": 0.95
+              "start": 18.159,
+              "end": 19.165,
+              "confidence": 1
             },
             {
               "word": " in",
-              "start": 21.609,
-              "end": 21.73,
+              "start": 19.346,
+              "end": 19.467,
               "confidence": 1
             },
             {
               "word": " our",
-              "start": 21.75,
-              "end": 21.871,
-              "confidence": 0.83
+              "start": 19.468,
+              "end": 19.588,
+              "confidence": 0.9
             },
             {
               "word": " preview",
-              "start": 21.911,
-              "end": 22.333,
-              "confidence": 0.92
+              "start": 19.628,
+              "end": 20.05,
+              "confidence": 0.93
             },
             {
               "word": " of",
-              "start": 22.474,
-              "end": 22.595,
+              "start": 20.191,
+              "end": 20.312,
               "confidence": 1
             },
             {
               "word": " the",
-              "start": 22.596,
-              "end": 22.676,
+              "start": 20.314,
+              "end": 20.413,
               "confidence": 1
             },
             {
               "word": " quarterfinals.",
-              "start": 22.696,
-              "end": 23.38,
-              "confidence": 0.65
+              "start": 20.414,
+              "end": 21.097,
+              "confidence": 0.69
+            }
+          ]
+        },
+        {
+          "text": "The quarterfinal action kicks off with Japan and Vietnam squaring off",
+          "start": 26.545,
+          "end": 30.427,
+          "language": "en",
+          "confidence": 0.9445454545454546,
+          "channel": 0,
+          "words": [
+            {
+              "word": " The",
+              "start": 26.545,
+              "end": 26.666,
+              "confidence": 1
+            },
+            {
+              "word": " quarterfinal",
+              "start": 26.686,
+              "end": 27.249,
+              "confidence": 0.57
+            },
+            {
+              "word": " action",
+              "start": 27.309,
+              "end": 27.631,
+              "confidence": 1
+            },
+            {
+              "word": " kicks",
+              "start": 27.712,
+              "end": 27.993,
+              "confidence": 1
+            },
+            {
+              "word": " off",
+              "start": 28.054,
+              "end": 28.214,
+              "confidence": 0.95
+            },
+            {
+              "word": " with",
+              "start": 28.375,
+              "end": 28.496,
+              "confidence": 1
+            },
+            {
+              "word": " Japan",
+              "start": 28.536,
+              "end": 28.918,
+              "confidence": 1
+            },
+            {
+              "word": " and",
+              "start": 28.959,
+              "end": 29.079,
+              "confidence": 0.97
+            },
+            {
+              "word": " Vietnam",
+              "start": 29.099,
+              "end": 29.602,
+              "confidence": 1
+            },
+            {
+              "word": " squaring",
+              "start": 29.803,
+              "end": 30.246,
+              "confidence": 0.94
+            },
+            {
+              "word": " off",
+              "start": 30.286,
+              "end": 30.427,
+              "confidence": 0.96
+            }
+          ]
+        },
+        {
+          "text": "at the Patam Thani Stadium with the former firm favourites.",
+          "start": 30.5,
+          "end": 34.09,
+          "language": "en",
+          "confidence": 0.882,
+          "channel": 0,
+          "words": [
+            {
+              "word": " at",
+              "start": 30.5,
+              "end": 30.62,
+              "confidence": 0.66
+            },
+            {
+              "word": " the",
+              "start": 30.622,
+              "end": 30.7,
+              "confidence": 0.96
+            },
+            {
+              "word": " Patam",
+              "start": 30.72,
+              "end": 31.062,
+              "confidence": 0.87
+            },
+            {
+              "word": " Thani",
+              "start": 31.122,
+              "end": 31.423,
+              "confidence": 0.68
+            },
+            {
+              "word": " Stadium",
+              "start": 31.483,
+              "end": 31.924,
+              "confidence": 0.99
+            },
+            {
+              "word": " with",
+              "start": 32.466,
+              "end": 32.586,
+              "confidence": 0.99
+            },
+            {
+              "word": " the",
+              "start": 32.587,
+              "end": 32.686,
+              "confidence": 0.99
+            },
+            {
+              "word": " former",
+              "start": 32.706,
+              "end": 33.067,
+              "confidence": 0.99
+            },
+            {
+              "word": " firm",
+              "start": 33.268,
+              "end": 33.509,
+              "confidence": 0.99
+            },
+            {
+              "word": " favourites.",
+              "start": 33.609,
+              "end": 34.09,
+              "confidence": 0.7
+            }
+          ]
+        },
+        {
+          "text": "champions a record six times,",
+          "start": 34.594,
+          "end": 36.569,
+          "language": "en",
+          "confidence": 0.9640000000000001,
+          "channel": 0,
+          "words": [
+            {
+              "word": " champions",
+              "start": 34.594,
+              "end": 35.138,
+              "confidence": 0.95
+            },
+            {
+              "word": " a",
+              "start": 35.139,
+              "end": 35.218,
+              "confidence": 0.96
+            },
+            {
+              "word": " record",
+              "start": 35.259,
+              "end": 35.601,
+              "confidence": 0.99
+            },
+            {
+              "word": " six",
+              "start": 35.803,
+              "end": 36.004,
+              "confidence": 1
+            },
+            {
+              "word": " times,",
+              "start": 36.145,
+              "end": 36.569,
+              "confidence": 0.92
+            }
+          ]
+        },
+        {
+          "text": "Japan cruised into the quarterfinals with a perfect record of three wins in Group C.",
+          "start": 36.99,
+          "end": 41.52,
+          "language": "en",
+          "confidence": 0.858,
+          "channel": 0,
+          "words": [
+            {
+              "word": " Japan",
+              "start": 36.99,
+              "end": 37.471,
+              "confidence": 1
+            },
+            {
+              "word": " cruised",
+              "start": 37.611,
+              "end": 38.032,
+              "confidence": 0.85
+            },
+            {
+              "word": " into",
+              "start": 38.052,
+              "end": 38.193,
+              "confidence": 1
+            },
+            {
+              "word": " the",
+              "start": 38.194,
+              "end": 38.313,
+              "confidence": 1
+            },
+            {
+              "word": " quarterfinals",
+              "start": 38.314,
+              "end": 39.055,
+              "confidence": 0.64
+            },
+            {
+              "word": " with",
+              "start": 39.175,
+              "end": 39.295,
+              "confidence": 0.97
+            },
+            {
+              "word": " a",
+              "start": 39.296,
+              "end": 39.375,
+              "confidence": 0.99
+            },
+            {
+              "word": " perfect",
+              "start": 39.395,
+              "end": 39.857,
+              "confidence": 0.99
+            },
+            {
+              "word": " record",
+              "start": 39.877,
+              "end": 40.257,
+              "confidence": 1
+            },
+            {
+              "word": " of",
+              "start": 40.277,
+              "end": 40.398,
+              "confidence": 1
+            },
+            {
+              "word": " three",
+              "start": 40.438,
+              "end": 40.698,
+              "confidence": 0.92
+            },
+            {
+              "word": " wins",
+              "start": 40.739,
+              "end": 41.039,
+              "confidence": 0.99
+            },
+            {
+              "word": " in",
+              "start": 41.04,
+              "end": 41.159,
+              "confidence": 0.5
+            },
+            {
+              "word": " Group",
+              "start": 41.2,
+              "end": 41.38,
+              "confidence": 1
+            },
+            {
+              "word": " C.",
+              "start": 41.4,
+              "end": 41.52,
+              "confidence": 0.02
+            }
+          ]
+        },
+        {
+          "text": "Such was their dominance that Japan netted 13 times",
+          "start": 42.47,
+          "end": 45.823,
+          "language": "en",
+          "confidence": 0.9311111111111112,
+          "channel": 0,
+          "words": [
+            {
+              "word": " Such",
+              "start": 42.47,
+              "end": 42.671,
+              "confidence": 1
+            },
+            {
+              "word": " was",
+              "start": 42.711,
+              "end": 42.832,
+              "confidence": 1
+            },
+            {
+              "word": " their",
+              "start": 42.872,
+              "end": 42.992,
+              "confidence": 0.99
+            },
+            {
+              "word": " dominance",
+              "start": 43.033,
+              "end": 43.555,
+              "confidence": 0.84
+            },
+            {
+              "word": " that",
+              "start": 43.675,
+              "end": 43.796,
+              "confidence": 0.74
+            },
+            {
+              "word": " Japan",
+              "start": 43.836,
+              "end": 44.197,
+              "confidence": 1
+            },
+            {
+              "word": " netted",
+              "start": 44.257,
+              "end": 44.579,
+              "confidence": 0.92
+            },
+            {
+              "word": " 13",
+              "start": 44.779,
+              "end": 45.301,
+              "confidence": 0.89
+            },
+            {
+              "word": " times",
+              "start": 45.382,
+              "end": 45.823,
+              "confidence": 1
+            }
+          ]
+        },
+        {
+          "text": "and conceded only twice as they showed their determination to reclaim the title.",
+          "start": 46.168,
+          "end": 50.806,
+          "language": "en",
+          "confidence": 0.9623076923076923,
+          "channel": 0,
+          "words": [
+            {
+              "word": " and",
+              "start": 46.168,
+              "end": 46.289,
+              "confidence": 0.88
+            },
+            {
+              "word": " conceded",
+              "start": 46.309,
+              "end": 46.731,
+              "confidence": 0.89
+            },
+            {
+              "word": " only",
+              "start": 46.791,
+              "end": 46.951,
+              "confidence": 1
+            },
+            {
+              "word": " twice",
+              "start": 47.032,
+              "end": 47.514,
+              "confidence": 0.89
+            },
+            {
+              "word": " as",
+              "start": 48.096,
+              "end": 48.216,
+              "confidence": 1
+            },
+            {
+              "word": " they",
+              "start": 48.217,
+              "end": 48.337,
+              "confidence": 1
+            },
+            {
+              "word": " showed",
+              "start": 48.417,
+              "end": 48.678,
+              "confidence": 0.93
+            },
+            {
+              "word": " their",
+              "start": 48.698,
+              "end": 48.819,
+              "confidence": 0.97
+            },
+            {
+              "word": " determination",
+              "start": 48.839,
+              "end": 49.582,
+              "confidence": 1
+            },
+            {
+              "word": " to",
+              "start": 49.642,
+              "end": 49.762,
+              "confidence": 1
+            },
+            {
+              "word": " reclaim",
+              "start": 49.843,
+              "end": 50.244,
+              "confidence": 0.96
+            },
+            {
+              "word": " the",
+              "start": 50.245,
+              "end": 50.365,
+              "confidence": 0.99
+            },
+            {
+              "word": " title.",
+              "start": 50.385,
+              "end": 50.806,
+              "confidence": 1
+            }
+          ]
+        },
+        {
+          "text": "after falling in the final of the 2024 edition.",
+          "start": 51.127,
+          "end": 54.054,
+          "language": "en",
+          "confidence": 0.8688888888888888,
+          "channel": 0,
+          "words": [
+            {
+              "word": " after",
+              "start": 51.127,
+              "end": 51.327,
+              "confidence": 0.97
+            },
+            {
+              "word": " falling",
+              "start": 51.367,
+              "end": 51.728,
+              "confidence": 0.95
+            },
+            {
+              "word": " in",
+              "start": 51.748,
+              "end": 51.869,
+              "confidence": 1
+            },
+            {
+              "word": " the",
+              "start": 51.87,
+              "end": 51.949,
+              "confidence": 0.99
+            },
+            {
+              "word": " final",
+              "start": 51.989,
+              "end": 52.35,
+              "confidence": 0.95
+            },
+            {
+              "word": " of",
+              "start": 52.39,
+              "end": 52.51,
+              "confidence": 1
+            },
+            {
+              "word": " the",
+              "start": 52.511,
+              "end": 52.61,
+              "confidence": 0.99
+            },
+            {
+              "word": " 2024",
+              "start": 52.63,
+              "end": 53.633,
+              "confidence": 0.01
+            },
+            {
+              "word": " edition.",
+              "start": 53.673,
+              "end": 54.054,
+              "confidence": 0.96
+            }
+          ]
+        },
+        {
+          "text": "Vietnam",
+          "start": 54.874,
+          "end": 55.26,
+          "language": "en",
+          "confidence": 0.16,
+          "channel": 0,
+          "words": [
+            {
+              "word": " Vietnam",
+              "start": 54.874,
+              "end": 55.26,
+              "confidence": 0.16
             }
           ]
         }
       ],
-      "full_transcript": "The AFC Under-20 Women Asian Cup. Thailand 2026 enters the business end with the quarterfinals to be played over the weekend. All four ties promise to be scintillating affairs. after an exciting group stage which saw thrills, spills and more. Join theafc.com in our preview of the quarterfinals."
+      "full_transcript": "The AFC Under-20 Women Asian Cup Thailand 2026 enters the business end with the quarterfinals to be played over the weekend. All four ties promise to be scintillating affairs. after an exciting group stage which saw thrills, spills and more. Join theafc.com in our preview of the quarterfinals. The quarterfinal action kicks off with Japan and Vietnam squaring off at the Patam Thani Stadium with the former firm favourites. champions a record six times, Japan cruised into the quarterfinals with a perfect record of three wins in Group C. Such was their dominance that Japan netted 13 times and conceded only twice as they showed their determination to reclaim the title. after falling in the final of the 2024 edition. Vietnam"
     },
     "messages": [
       {
         "type": "transcript",
-        "session_id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
-        "created_at": "2026-04-11T10:53:36.977Z",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:17:30.958Z",
         "data": {
           "id": "00_00000000",
           "is_final": true,
           "utterance": {
-            "text": "The AFC Under-20 Women Asian Cup.",
-            "start": 2.888,
-            "end": 5.343,
+            "text": "The AFC Under-20 Women Asian Cup Thailand 2026",
+            "start": 0.601,
+            "end": 4.788,
             "language": "en",
-            "confidence": 0.9349999999999999,
+            "confidence": 0.81125,
             "channel": 0,
             "words": [
               {
                 "word": "The",
-                "start": 2.888,
-                "end": 3.008,
+                "start": 0.601,
+                "end": 0.721,
                 "confidence": 0.98
               },
               {
                 "word": " AFC",
-                "start": 3.089,
-                "end": 3.411,
-                "confidence": 0.98
-              },
-              {
-                "word": " Under-20",
-                "start": 3.773,
-                "end": 3.975,
+                "start": 0.801,
+                "end": 1.142,
                 "confidence": 0.99
               },
               {
+                "word": " Under-20",
+                "start": 1.502,
+                "end": 1.703,
+                "confidence": 1
+              },
+              {
                 "word": " Women",
-                "start": 4.518,
-                "end": 4.74,
-                "confidence": 0.95
+                "start": 2.223,
+                "end": 2.464,
+                "confidence": 1
               },
               {
                 "word": " Asian",
-                "start": 4.82,
-                "end": 5.062,
-                "confidence": 0.94
+                "start": 2.544,
+                "end": 2.784,
+                "confidence": 0.91
               },
               {
-                "word": " Cup.",
-                "start": 5.142,
-                "end": 5.343,
-                "confidence": 0.77
+                "word": " Cup",
+                "start": 2.844,
+                "end": 3.065,
+                "confidence": 0.85
+              },
+              {
+                "word": " Thailand",
+                "start": 3.365,
+                "end": 3.846,
+                "confidence": 0.74
+              },
+              {
+                "word": " 2026",
+                "start": 3.847,
+                "end": 4.788,
+                "confidence": 0.02
               }
             ]
           }
@@ -471,107 +999,95 @@
       },
       {
         "type": "transcript",
-        "session_id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
-        "created_at": "2026-04-11T10:53:42.626Z",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:17:36.752Z",
         "data": {
           "id": "00_00000001",
           "is_final": true,
           "utterance": {
-            "text": "Thailand 2026 enters the business end with the quarterfinals to be played over the weekend.",
-            "start": 5.647,
-            "end": 10.995,
+            "text": "enters the business end with the quarterfinals to be played over the weekend.",
+            "start": 5.371,
+            "end": 8.747,
             "language": "en",
-            "confidence": 0.8706666666666667,
+            "confidence": 0.9146153846153846,
             "channel": 0,
             "words": [
               {
-                "word": " Thailand",
-                "start": 5.647,
-                "end": 6.108,
-                "confidence": 0.63
-              },
-              {
-                "word": " 2026",
-                "start": 6.109,
-                "end": 7.049,
-                "confidence": 0
-              },
-              {
                 "word": " enters",
-                "start": 7.65,
-                "end": 7.891,
-                "confidence": 1
+                "start": 5.371,
+                "end": 5.612,
+                "confidence": 0.49
               },
               {
                 "word": " the",
-                "start": 7.892,
-                "end": 8.011,
-                "confidence": 0.95
+                "start": 5.613,
+                "end": 5.733,
+                "confidence": 0.98
               },
               {
                 "word": " business",
-                "start": 8.031,
-                "end": 8.351,
-                "confidence": 1
+                "start": 5.753,
+                "end": 6.074,
+                "confidence": 0.96
               },
               {
                 "word": " end",
-                "start": 8.451,
-                "end": 8.652,
-                "confidence": 1
+                "start": 6.195,
+                "end": 6.376,
+                "confidence": 0.92
               },
               {
                 "word": " with",
-                "start": 8.772,
-                "end": 8.892,
-                "confidence": 1
+                "start": 6.496,
+                "end": 6.617,
+                "confidence": 0.98
               },
               {
                 "word": " the",
-                "start": 8.893,
-                "end": 8.992,
-                "confidence": 0.99
+                "start": 6.637,
+                "end": 6.717,
+                "confidence": 0.97
               },
               {
                 "word": " quarterfinals",
-                "start": 8.993,
-                "end": 9.753,
-                "confidence": 0.66
+                "start": 6.738,
+                "end": 7.501,
+                "confidence": 0.69
               },
               {
                 "word": " to",
-                "start": 9.773,
-                "end": 9.893,
+                "start": 7.503,
+                "end": 7.622,
                 "confidence": 1
               },
               {
                 "word": " be",
-                "start": 9.894,
-                "end": 9.993,
+                "start": 7.623,
+                "end": 7.722,
                 "confidence": 1
               },
               {
                 "word": " played",
-                "start": 10.014,
-                "end": 10.294,
+                "start": 7.742,
+                "end": 8.024,
                 "confidence": 0.99
               },
               {
                 "word": " over",
-                "start": 10.314,
-                "end": 10.454,
-                "confidence": 1
+                "start": 8.044,
+                "end": 8.185,
+                "confidence": 0.99
               },
               {
                 "word": " the",
-                "start": 10.455,
-                "end": 10.574,
-                "confidence": 0.85
+                "start": 8.205,
+                "end": 8.305,
+                "confidence": 0.93
               },
               {
                 "word": " weekend.",
-                "start": 10.575,
-                "end": 10.995,
+                "start": 8.306,
+                "end": 8.747,
                 "confidence": 0.99
               }
             ]
@@ -580,66 +1096,66 @@
       },
       {
         "type": "transcript",
-        "session_id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
-        "created_at": "2026-04-11T10:53:46.287Z",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:17:38.548Z",
         "data": {
           "id": "00_00000002",
           "is_final": true,
           "utterance": {
             "text": "All four ties promise to be scintillating affairs.",
-            "start": 12.14,
-            "end": 14.678,
+            "start": 9.88,
+            "end": 12.418,
             "language": "en",
-            "confidence": 0.94625,
+            "confidence": 0.91625,
             "channel": 0,
             "words": [
               {
                 "word": " All",
-                "start": 12.14,
-                "end": 12.301,
-                "confidence": 0.99
+                "start": 9.88,
+                "end": 10.021,
+                "confidence": 0.98
               },
               {
                 "word": " four",
-                "start": 12.401,
-                "end": 12.603,
-                "confidence": 0.98
-              },
-              {
-                "word": " ties",
-                "start": 12.663,
-                "end": 13.046,
+                "start": 10.121,
+                "end": 10.323,
                 "confidence": 0.88
               },
               {
+                "word": " ties",
+                "start": 10.383,
+                "end": 10.766,
+                "confidence": 0.87
+              },
+              {
                 "word": " promise",
-                "start": 13.106,
-                "end": 13.389,
-                "confidence": 0.98
+                "start": 10.826,
+                "end": 11.129,
+                "confidence": 0.99
               },
               {
                 "word": " to",
-                "start": 13.39,
-                "end": 13.509,
+                "start": 11.13,
+                "end": 11.229,
                 "confidence": 0.99
               },
               {
                 "word": " be",
-                "start": 13.51,
-                "end": 13.61,
-                "confidence": 0.99
+                "start": 11.23,
+                "end": 11.33,
+                "confidence": 1
               },
               {
                 "word": " scintillating",
-                "start": 13.691,
-                "end": 14.275,
-                "confidence": 0.77
+                "start": 11.411,
+                "end": 11.995,
+                "confidence": 0.7
               },
               {
                 "word": " affairs.",
-                "start": 14.295,
-                "end": 14.678,
-                "confidence": 0.99
+                "start": 12.015,
+                "end": 12.418,
+                "confidence": 0.92
               }
             ]
           }
@@ -647,84 +1163,84 @@
       },
       {
         "type": "transcript",
-        "session_id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
-        "created_at": "2026-04-11T10:53:50.768Z",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:17:42.905Z",
         "data": {
           "id": "00_00000003",
           "is_final": true,
           "utterance": {
             "text": "after an exciting group stage which saw thrills, spills and more.",
-            "start": 15.261,
-            "end": 19.097,
+            "start": 12.98,
+            "end": 16.814,
             "language": "en",
-            "confidence": 0.9118181818181817,
+            "confidence": 0.9381818181818182,
             "channel": 0,
             "words": [
               {
                 "word": " after",
-                "start": 15.261,
-                "end": 15.461,
+                "start": 12.98,
+                "end": 13.181,
                 "confidence": 1
               },
               {
                 "word": " an",
-                "start": 15.462,
-                "end": 15.562,
+                "start": 13.201,
+                "end": 13.281,
                 "confidence": 1
               },
               {
                 "word": " exciting",
-                "start": 15.563,
-                "end": 16.024,
-                "confidence": 0.98
+                "start": 13.282,
+                "end": 13.763,
+                "confidence": 0.96
               },
               {
                 "word": " group",
-                "start": 16.064,
-                "end": 16.265,
-                "confidence": 1
+                "start": 13.803,
+                "end": 13.984,
+                "confidence": 0.97
               },
               {
                 "word": " stage",
-                "start": 16.325,
-                "end": 16.687,
-                "confidence": 0.98
-              },
-              {
-                "word": " which",
-                "start": 16.868,
-                "end": 17.028,
+                "start": 14.044,
+                "end": 14.405,
                 "confidence": 0.99
               },
               {
+                "word": " which",
+                "start": 14.606,
+                "end": 14.746,
+                "confidence": 1
+              },
+              {
                 "word": " saw",
-                "start": 17.089,
-                "end": 17.229,
-                "confidence": 0.87
+                "start": 14.806,
+                "end": 14.947,
+                "confidence": 0.86
               },
               {
                 "word": " thrills,",
-                "start": 17.35,
-                "end": 17.792,
+                "start": 15.067,
+                "end": 15.529,
                 "confidence": 0.89
               },
               {
                 "word": " spills",
-                "start": 18.033,
-                "end": 18.515,
-                "confidence": 0.9
+                "start": 15.75,
+                "end": 16.232,
+                "confidence": 0.96
               },
               {
                 "word": " and",
-                "start": 18.716,
-                "end": 18.856,
-                "confidence": 0.71
+                "start": 16.452,
+                "end": 16.573,
+                "confidence": 0.99
               },
               {
                 "word": " more.",
-                "start": 18.896,
-                "end": 19.097,
-                "confidence": 0.71
+                "start": 16.613,
+                "end": 16.814,
+                "confidence": 0.7
               }
             ]
           }
@@ -732,66 +1248,681 @@
       },
       {
         "type": "transcript",
-        "session_id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
-        "created_at": "2026-04-11T10:53:55.052Z",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:17:47.274Z",
         "data": {
           "id": "00_00000004",
           "is_final": true,
           "utterance": {
             "text": "Join theafc.com in our preview of the quarterfinals.",
-            "start": 20.18,
-            "end": 23.38,
+            "start": 17.897,
+            "end": 21.097,
             "language": "en",
-            "confidence": 0.91125,
+            "confidence": 0.935,
             "channel": 0,
             "words": [
               {
                 "word": " Join",
-                "start": 20.18,
-                "end": 20.382,
-                "confidence": 0.94
+                "start": 17.897,
+                "end": 18.119,
+                "confidence": 0.96
               },
               {
                 "word": " theafc.com",
-                "start": 20.422,
-                "end": 21.428,
-                "confidence": 0.95
+                "start": 18.159,
+                "end": 19.165,
+                "confidence": 1
               },
               {
                 "word": " in",
-                "start": 21.609,
-                "end": 21.73,
+                "start": 19.346,
+                "end": 19.467,
                 "confidence": 1
               },
               {
                 "word": " our",
-                "start": 21.75,
-                "end": 21.871,
-                "confidence": 0.83
+                "start": 19.468,
+                "end": 19.588,
+                "confidence": 0.9
               },
               {
                 "word": " preview",
-                "start": 21.911,
-                "end": 22.333,
-                "confidence": 0.92
+                "start": 19.628,
+                "end": 20.05,
+                "confidence": 0.93
               },
               {
                 "word": " of",
-                "start": 22.474,
-                "end": 22.595,
+                "start": 20.191,
+                "end": 20.312,
                 "confidence": 1
               },
               {
                 "word": " the",
-                "start": 22.596,
-                "end": 22.676,
+                "start": 20.314,
+                "end": 20.413,
                 "confidence": 1
               },
               {
                 "word": " quarterfinals.",
-                "start": 22.696,
-                "end": 23.38,
-                "confidence": 0.65
+                "start": 20.414,
+                "end": 21.097,
+                "confidence": 0.69
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:17:56.535Z",
+        "data": {
+          "id": "00_00000005",
+          "is_final": true,
+          "utterance": {
+            "text": "The quarterfinal action kicks off with Japan and Vietnam squaring off",
+            "start": 26.545,
+            "end": 30.427,
+            "language": "en",
+            "confidence": 0.9445454545454546,
+            "channel": 0,
+            "words": [
+              {
+                "word": " The",
+                "start": 26.545,
+                "end": 26.666,
+                "confidence": 1
+              },
+              {
+                "word": " quarterfinal",
+                "start": 26.686,
+                "end": 27.249,
+                "confidence": 0.57
+              },
+              {
+                "word": " action",
+                "start": 27.309,
+                "end": 27.631,
+                "confidence": 1
+              },
+              {
+                "word": " kicks",
+                "start": 27.712,
+                "end": 27.993,
+                "confidence": 1
+              },
+              {
+                "word": " off",
+                "start": 28.054,
+                "end": 28.214,
+                "confidence": 0.95
+              },
+              {
+                "word": " with",
+                "start": 28.375,
+                "end": 28.496,
+                "confidence": 1
+              },
+              {
+                "word": " Japan",
+                "start": 28.536,
+                "end": 28.918,
+                "confidence": 1
+              },
+              {
+                "word": " and",
+                "start": 28.959,
+                "end": 29.079,
+                "confidence": 0.97
+              },
+              {
+                "word": " Vietnam",
+                "start": 29.099,
+                "end": 29.602,
+                "confidence": 1
+              },
+              {
+                "word": " squaring",
+                "start": 29.803,
+                "end": 30.246,
+                "confidence": 0.94
+              },
+              {
+                "word": " off",
+                "start": 30.286,
+                "end": 30.427,
+                "confidence": 0.96
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:18:00.194Z",
+        "data": {
+          "id": "00_00000006",
+          "is_final": true,
+          "utterance": {
+            "text": "at the Patam Thani Stadium with the former firm favourites.",
+            "start": 30.5,
+            "end": 34.09,
+            "language": "en",
+            "confidence": 0.882,
+            "channel": 0,
+            "words": [
+              {
+                "word": " at",
+                "start": 30.5,
+                "end": 30.62,
+                "confidence": 0.66
+              },
+              {
+                "word": " the",
+                "start": 30.622,
+                "end": 30.7,
+                "confidence": 0.96
+              },
+              {
+                "word": " Patam",
+                "start": 30.72,
+                "end": 31.062,
+                "confidence": 0.87
+              },
+              {
+                "word": " Thani",
+                "start": 31.122,
+                "end": 31.423,
+                "confidence": 0.68
+              },
+              {
+                "word": " Stadium",
+                "start": 31.483,
+                "end": 31.924,
+                "confidence": 0.99
+              },
+              {
+                "word": " with",
+                "start": 32.466,
+                "end": 32.586,
+                "confidence": 0.99
+              },
+              {
+                "word": " the",
+                "start": 32.587,
+                "end": 32.686,
+                "confidence": 0.99
+              },
+              {
+                "word": " former",
+                "start": 32.706,
+                "end": 33.067,
+                "confidence": 0.99
+              },
+              {
+                "word": " firm",
+                "start": 33.268,
+                "end": 33.509,
+                "confidence": 0.99
+              },
+              {
+                "word": " favourites.",
+                "start": 33.609,
+                "end": 34.09,
+                "confidence": 0.7
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:18:02.628Z",
+        "data": {
+          "id": "00_00000007",
+          "is_final": true,
+          "utterance": {
+            "text": "champions a record six times,",
+            "start": 34.594,
+            "end": 36.569,
+            "language": "en",
+            "confidence": 0.9640000000000001,
+            "channel": 0,
+            "words": [
+              {
+                "word": " champions",
+                "start": 34.594,
+                "end": 35.138,
+                "confidence": 0.95
+              },
+              {
+                "word": " a",
+                "start": 35.139,
+                "end": 35.218,
+                "confidence": 0.96
+              },
+              {
+                "word": " record",
+                "start": 35.259,
+                "end": 35.601,
+                "confidence": 0.99
+              },
+              {
+                "word": " six",
+                "start": 35.803,
+                "end": 36.004,
+                "confidence": 1
+              },
+              {
+                "word": " times,",
+                "start": 36.145,
+                "end": 36.569,
+                "confidence": 0.92
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:18:07.715Z",
+        "data": {
+          "id": "00_00000008",
+          "is_final": true,
+          "utterance": {
+            "text": "Japan cruised into the quarterfinals with a perfect record of three wins in Group C.",
+            "start": 36.99,
+            "end": 41.52,
+            "language": "en",
+            "confidence": 0.858,
+            "channel": 0,
+            "words": [
+              {
+                "word": " Japan",
+                "start": 36.99,
+                "end": 37.471,
+                "confidence": 1
+              },
+              {
+                "word": " cruised",
+                "start": 37.611,
+                "end": 38.032,
+                "confidence": 0.85
+              },
+              {
+                "word": " into",
+                "start": 38.052,
+                "end": 38.193,
+                "confidence": 1
+              },
+              {
+                "word": " the",
+                "start": 38.194,
+                "end": 38.313,
+                "confidence": 1
+              },
+              {
+                "word": " quarterfinals",
+                "start": 38.314,
+                "end": 39.055,
+                "confidence": 0.64
+              },
+              {
+                "word": " with",
+                "start": 39.175,
+                "end": 39.295,
+                "confidence": 0.97
+              },
+              {
+                "word": " a",
+                "start": 39.296,
+                "end": 39.375,
+                "confidence": 0.99
+              },
+              {
+                "word": " perfect",
+                "start": 39.395,
+                "end": 39.857,
+                "confidence": 0.99
+              },
+              {
+                "word": " record",
+                "start": 39.877,
+                "end": 40.257,
+                "confidence": 1
+              },
+              {
+                "word": " of",
+                "start": 40.277,
+                "end": 40.398,
+                "confidence": 1
+              },
+              {
+                "word": " three",
+                "start": 40.438,
+                "end": 40.698,
+                "confidence": 0.92
+              },
+              {
+                "word": " wins",
+                "start": 40.739,
+                "end": 41.039,
+                "confidence": 0.99
+              },
+              {
+                "word": " in",
+                "start": 41.04,
+                "end": 41.159,
+                "confidence": 0.5
+              },
+              {
+                "word": " Group",
+                "start": 41.2,
+                "end": 41.38,
+                "confidence": 1
+              },
+              {
+                "word": " C.",
+                "start": 41.4,
+                "end": 41.52,
+                "confidence": 0.02
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:18:11.846Z",
+        "data": {
+          "id": "00_00000009",
+          "is_final": true,
+          "utterance": {
+            "text": "Such was their dominance that Japan netted 13 times",
+            "start": 42.47,
+            "end": 45.823,
+            "language": "en",
+            "confidence": 0.9311111111111112,
+            "channel": 0,
+            "words": [
+              {
+                "word": " Such",
+                "start": 42.47,
+                "end": 42.671,
+                "confidence": 1
+              },
+              {
+                "word": " was",
+                "start": 42.711,
+                "end": 42.832,
+                "confidence": 1
+              },
+              {
+                "word": " their",
+                "start": 42.872,
+                "end": 42.992,
+                "confidence": 0.99
+              },
+              {
+                "word": " dominance",
+                "start": 43.033,
+                "end": 43.555,
+                "confidence": 0.84
+              },
+              {
+                "word": " that",
+                "start": 43.675,
+                "end": 43.796,
+                "confidence": 0.74
+              },
+              {
+                "word": " Japan",
+                "start": 43.836,
+                "end": 44.197,
+                "confidence": 1
+              },
+              {
+                "word": " netted",
+                "start": 44.257,
+                "end": 44.579,
+                "confidence": 0.92
+              },
+              {
+                "word": " 13",
+                "start": 44.779,
+                "end": 45.301,
+                "confidence": 0.89
+              },
+              {
+                "word": " times",
+                "start": 45.382,
+                "end": 45.823,
+                "confidence": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:18:16.953Z",
+        "data": {
+          "id": "00_00000010",
+          "is_final": true,
+          "utterance": {
+            "text": "and conceded only twice as they showed their determination to reclaim the title.",
+            "start": 46.168,
+            "end": 50.806,
+            "language": "en",
+            "confidence": 0.9623076923076923,
+            "channel": 0,
+            "words": [
+              {
+                "word": " and",
+                "start": 46.168,
+                "end": 46.289,
+                "confidence": 0.88
+              },
+              {
+                "word": " conceded",
+                "start": 46.309,
+                "end": 46.731,
+                "confidence": 0.89
+              },
+              {
+                "word": " only",
+                "start": 46.791,
+                "end": 46.951,
+                "confidence": 1
+              },
+              {
+                "word": " twice",
+                "start": 47.032,
+                "end": 47.514,
+                "confidence": 0.89
+              },
+              {
+                "word": " as",
+                "start": 48.096,
+                "end": 48.216,
+                "confidence": 1
+              },
+              {
+                "word": " they",
+                "start": 48.217,
+                "end": 48.337,
+                "confidence": 1
+              },
+              {
+                "word": " showed",
+                "start": 48.417,
+                "end": 48.678,
+                "confidence": 0.93
+              },
+              {
+                "word": " their",
+                "start": 48.698,
+                "end": 48.819,
+                "confidence": 0.97
+              },
+              {
+                "word": " determination",
+                "start": 48.839,
+                "end": 49.582,
+                "confidence": 1
+              },
+              {
+                "word": " to",
+                "start": 49.642,
+                "end": 49.762,
+                "confidence": 1
+              },
+              {
+                "word": " reclaim",
+                "start": 49.843,
+                "end": 50.244,
+                "confidence": 0.96
+              },
+              {
+                "word": " the",
+                "start": 50.245,
+                "end": 50.365,
+                "confidence": 0.99
+              },
+              {
+                "word": " title.",
+                "start": 50.385,
+                "end": 50.806,
+                "confidence": 1
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:18:20.148Z",
+        "data": {
+          "id": "00_00000011",
+          "is_final": true,
+          "utterance": {
+            "text": "after falling in the final of the 2024 edition.",
+            "start": 51.127,
+            "end": 54.054,
+            "language": "en",
+            "confidence": 0.8688888888888888,
+            "channel": 0,
+            "words": [
+              {
+                "word": " after",
+                "start": 51.127,
+                "end": 51.327,
+                "confidence": 0.97
+              },
+              {
+                "word": " falling",
+                "start": 51.367,
+                "end": 51.728,
+                "confidence": 0.95
+              },
+              {
+                "word": " in",
+                "start": 51.748,
+                "end": 51.869,
+                "confidence": 1
+              },
+              {
+                "word": " the",
+                "start": 51.87,
+                "end": 51.949,
+                "confidence": 0.99
+              },
+              {
+                "word": " final",
+                "start": 51.989,
+                "end": 52.35,
+                "confidence": 0.95
+              },
+              {
+                "word": " of",
+                "start": 52.39,
+                "end": 52.51,
+                "confidence": 1
+              },
+              {
+                "word": " the",
+                "start": 52.511,
+                "end": 52.61,
+                "confidence": 0.99
+              },
+              {
+                "word": " 2024",
+                "start": 52.63,
+                "end": 53.633,
+                "confidence": 0.01
+              },
+              {
+                "word": " edition.",
+                "start": 53.673,
+                "end": 54.054,
+                "confidence": 0.96
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:18:21.026Z",
+        "data": {
+          "id": "00_00000012",
+          "is_final": true,
+          "utterance": {
+            "text": "Vietnam",
+            "start": 54.874,
+            "end": 55.26,
+            "language": "en",
+            "confidence": 0.16,
+            "channel": 0,
+            "words": [
+              {
+                "word": " Vietnam",
+                "start": 54.874,
+                "end": 55.26,
+                "confidence": 0.16
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "499d0555-c13f-4ce1-8166-f0c7a0e4fecf",
+        "created_at": "2026-04-11T14:18:21.026Z",
+        "data": {
+          "id": "00_00000012",
+          "is_final": true,
+          "utterance": {
+            "text": " Vietnam",
+            "start": 54.874,
+            "end": 55.26,
+            "language": "en",
+            "confidence": 0.16,
+            "channel": 0,
+            "words": [
+              {
+                "word": " Vietnam",
+                "start": 54.874,
+                "end": 55.26,
+                "confidence": 0.16
               }
             ]
           }
@@ -805,34 +1936,82 @@
     "target_language": "zh",
     "utterances": [
       {
-        "start": 2.888,
-        "end": 5.343,
-        "source_text": "The AFC Under-20 Women Asian Cup.",
-        "translated_text": "亚足联U20女足亚洲杯。"
+        "start": 0.601,
+        "end": 4.788,
+        "source_text": "The AFC Under-20 Women Asian Cup Thailand 2026",
+        "translated_text": "2026年亚足联U-20女足亚洲杯泰国赛"
       },
       {
-        "start": 5.647,
-        "end": 10.995,
-        "source_text": "Thailand 2026 enters the business end with the quarterfinals to be played over the weekend.",
-        "translated_text": "2026年泰国赛事进入关键阶段，四分之一决赛将于本周末打响。"
+        "start": 5.371,
+        "end": 8.747,
+        "source_text": "enters the business end with the quarterfinals to be played over the weekend.",
+        "translated_text": "即将进入关键阶段，本周末将展开四分之一决赛。"
       },
       {
-        "start": 12.14,
-        "end": 14.678,
+        "start": 9.88,
+        "end": 12.418,
         "source_text": "All four ties promise to be scintillating affairs.",
-        "translated_text": "四场对决均有望呈现精彩较量。"
+        "translated_text": "所有四场对决都注定精彩纷呈。"
       },
       {
-        "start": 15.261,
-        "end": 19.097,
+        "start": 12.98,
+        "end": 16.814,
         "source_text": "after an exciting group stage which saw thrills, spills and more.",
-        "translated_text": "经过小组赛阶段扣人心弦的激战与意外。"
+        "translated_text": "在经历了高潮迭起的小组赛之后。"
       },
       {
-        "start": 20.18,
-        "end": 23.38,
+        "start": 17.897,
+        "end": 21.097,
         "source_text": "Join theafc.com in our preview of the quarterfinals.",
-        "translated_text": "欢迎访问亚足联官网，与我们一同前瞻四分之一决赛。"
+        "translated_text": "请登录theafc.com，与我们一同前瞻四分之一决赛。"
+      },
+      {
+        "start": 26.545,
+        "end": 30.427,
+        "source_text": "The quarterfinal action kicks off with Japan and Vietnam squaring off",
+        "translated_text": "四分之一决赛首战由日本对阵越南，"
+      },
+      {
+        "start": 30.5,
+        "end": 34.09,
+        "source_text": "at the Patam Thani Stadium with the former firm favourites.",
+        "translated_text": "比赛将在帕坦塔尼体育场举行，日本队是公认的热门。"
+      },
+      {
+        "start": 34.594,
+        "end": 36.569,
+        "source_text": "champions a record six times,",
+        "translated_text": "作为六次夺冠的纪录保持者，"
+      },
+      {
+        "start": 36.99,
+        "end": 41.52,
+        "source_text": "Japan cruised into the quarterfinals with a perfect record of three wins in Group C.",
+        "translated_text": "日本队在C组以三战全胜的完美战绩轻松晋级四分之一决赛。"
+      },
+      {
+        "start": 42.47,
+        "end": 45.823,
+        "source_text": "Such was their dominance that Japan netted 13 times",
+        "translated_text": "他们的统治力如此强大，共打入13球，"
+      },
+      {
+        "start": 46.168,
+        "end": 50.806,
+        "source_text": "and conceded only twice as they showed their determination to reclaim the title.",
+        "translated_text": "仅失2球，展现了重夺冠军的决心，"
+      },
+      {
+        "start": 51.127,
+        "end": 54.054,
+        "source_text": "after falling in the final of the 2024 edition.",
+        "translated_text": "此前他们在2024年赛事中屈居亚军。"
+      },
+      {
+        "start": 54.874,
+        "end": 55.26,
+        "source_text": "Vietnam",
+        "translated_text": "越南队"
       }
     ]
   }

@@ -99,6 +99,7 @@ If you want to use your own translation API instead of Gladia's translation, fil
 TRANSLATION_API_KEY=your_key
 TRANSLATION_BASE_URL=https://your-openai-compatible-base-url/v1
 TRANSLATION_MODEL=your_model_name
+TRANSLATION_FREQUENCY=1
 ```
 
 When these are configured, the app will:
@@ -110,6 +111,12 @@ When these are configured, the app will:
 - Write translated Chinese subtitles into `output/output.srt`
 
 The `output/output.json` file will also include an `external_translation` block with the translated utterances.
+
+`TRANSLATION_FREQUENCY` controls how many final transcript lines are grouped into one translation request:
+
+- `1`: translate every line immediately; fastest, but each line has no local context
+- `2`: translate every 2 lines together; a little slower, but the pair can share context
+- `3+`: more context, but more delay before the Chinese line appears
 
 ## Run
 

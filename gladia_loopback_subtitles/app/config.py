@@ -25,6 +25,7 @@ class Settings:
     translation_api_key: str
     translation_base_url: str
     translation_api_model: str
+    translation_frequency: int
     translation_batch_size: int
     translation_request_timeout_seconds: float
     encoding: str
@@ -103,6 +104,7 @@ def load_settings() -> Settings:
         translation_api_key=translation_api_key,
         translation_base_url=translation_base_url,
         translation_api_model=translation_api_model,
+        translation_frequency=max(1, int(os.getenv("TRANSLATION_FREQUENCY", "1"))),
         translation_batch_size=int(os.getenv("TRANSLATION_BATCH_SIZE", "20")),
         translation_request_timeout_seconds=float(
             os.getenv("TRANSLATION_REQUEST_TIMEOUT_SECONDS", "60")
@@ -135,10 +137,12 @@ def build_runtime_settings(
     source_languages: list[str] | None = None,
     code_switching: bool | None = None,
     audio_enhancer: bool | None = None,
+    translation_frequency: int | None = None,
 ) -> Settings:
     return replace(
         settings,
         source_languages=source_languages if source_languages is not None else settings.source_languages,
         code_switching=code_switching if code_switching is not None else settings.code_switching,
         audio_enhancer=audio_enhancer if audio_enhancer is not None else settings.audio_enhancer,
+        translation_frequency=translation_frequency if translation_frequency is not None else settings.translation_frequency,
     )

@@ -29,6 +29,7 @@ class SystemAudioCapture:
         self.config = config
         self.backend = ""
         self.device_name = ""
+        self.last_level = 0.0
 
         self._frames_per_chunk = max(
             1, int(self.config.capture_sample_rate * self.config.chunk_duration_ms / 1000)
@@ -183,6 +184,7 @@ class SystemAudioCapture:
 
         audio = np.clip(audio / 32768.0, -1.0, 1.0)
         audio = self._resample(audio, source_rate, self.config.target_sample_rate)
+        self.last_level = self._calculate_level(audio)
         pcm = np.asarray(audio * 32767.0, dtype=np.int16)
         return pcm.tobytes()
 
@@ -196,6 +198,7 @@ class SystemAudioCapture:
 
         audio = np.clip(audio, -1.0, 1.0)
         audio = self._resample(audio, source_rate, self.config.target_sample_rate)
+        self.last_level = self._calculate_level(audio)
         pcm = np.asarray(audio * 32767.0, dtype=np.int16)
         return pcm.tobytes()
 
@@ -209,3 +212,11 @@ class SystemAudioCapture:
         source_positions = np.linspace(0.0, 1.0, num=audio.shape[0], endpoint=False)
         target_positions = np.linspace(0.0, 1.0, num=target_samples, endpoint=False)
         return np.interp(target_positions, source_positions, audio).astype(np.float32)
+
+    @staticmethod
+    def _calculate_level(audio: np.ndarray) -> float:
+        if audio.size == 0:
+            return 0.0
+
+        rms = float(np.sqrt(np.mean(np.square(audio, dtype=np.float32), dtype=np.float32)))
+        return max(0.0, min(1.0, rms * 4.0))

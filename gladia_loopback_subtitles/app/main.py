@@ -29,6 +29,7 @@ def main() -> None:
         dual_language_enabled=len(source_languages) > 1,
         secondary_language=source_languages[1] if len(source_languages) > 1 else "zh",
         denoise_enabled=settings.audio_enhancer,
+        translation_frequency=settings.translation_frequency,
     )
 
     async def _run_cli() -> None:

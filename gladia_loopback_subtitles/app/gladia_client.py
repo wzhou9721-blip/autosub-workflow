@@ -26,10 +26,16 @@ class GladiaLiveClient:
         settings: Settings,
         transcript_store: TranscriptStore,
         on_final_transcript: Callable[[str, dict[str, Any]], None] | None = None,
+        on_partial_transcript: Callable[[str], None] | None = None,
+        on_final_source: Callable[[str, str], None] | None = None,
+        on_translation: Callable[[str, str], None] | None = None,
     ) -> None:
         self.settings = settings
         self.transcript_store = transcript_store
         self.on_final_transcript = on_final_transcript
+        self.on_partial_transcript = on_partial_transcript
+        self.on_final_source = on_final_source
+        self.on_translation = on_translation
         self.http = requests.Session()
         self.http.headers.update(
             {
@@ -99,7 +105,13 @@ class GladiaLiveClient:
 
         return LiveSessionInfo(session_id=session_id, websocket_url=websocket_url)
 
-    async def stream_audio(self, session: LiveSessionInfo, capture: Any, stop_event: asyncio.Event) -> None:
+    async def stream_audio(
+        self,
+        session: LiveSessionInfo,
+        capture: Any,
+        stop_event: asyncio.Event,
+        on_audio_level: Callable[[float], None] | None = None,
+    ) -> None:
         async with websockets.connect(
             session.websocket_url,
             max_size=None,
@@ -115,6 +127,8 @@ class GladiaLiveClient:
 
                     chunk = await asyncio.to_thread(capture.read_chunk)
                     if chunk:
+                        if on_audio_level is not None:
+                            on_audio_level(float(getattr(capture, "last_level", 0.0)))
                         await websocket.send(chunk)
             finally:
                 await websocket.send(json.dumps({"type": "stop_recording"}))
@@ -149,11 +163,15 @@ class GladiaLiveClient:
             if data.get("is_final"):
                 self.transcript_store.store_final_source(utterance_id, utterance)
                 emit_runtime_message(f"[FINAL][SRC] {text}")
+                if self.on_final_source is not None:
+                    self.on_final_source(utterance_id, text)
                 if self.on_final_transcript is not None:
                     self.on_final_transcript(utterance_id, utterance)
             else:
                 self.transcript_store.store_partial(text)
                 emit_runtime_message(f"[PARTIAL] {text}")
+                if self.on_partial_transcript is not None:
+                    self.on_partial_transcript(text)
             return
 
         if message_type == "translation":
@@ -167,6 +185,8 @@ class GladiaLiveClient:
             target_language = translated_utterance.get("language") or data.get("target_language")
             if target_language == self.settings.target_language:
                 emit_runtime_message(f"[FINAL][ZH] {translated_text}")
+                if self.on_translation is not None:
+                    self.on_translation(utterance_id, translated_text)
             return
 
         if message_type == "error":
