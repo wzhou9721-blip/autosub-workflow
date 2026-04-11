@@ -1,0 +1,839 @@
+{
+  "id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
+  "request_id": "G-145a444d",
+  "version": 2,
+  "status": "done",
+  "created_at": "2026-04-11T10:53:28.808Z",
+  "completed_at": "2026-04-11T10:53:59.114Z",
+  "custom_metadata": null,
+  "error_code": null,
+  "kind": "live",
+  "file": {
+    "id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
+    "filename": "145a444d-54cf-4d87-b2d7-6c367bf1c62a.wav",
+    "source": null,
+    "audio_duration": 28,
+    "number_of_channels": 1
+  },
+  "request_params": {
+    "model": "solaria-1",
+    "callback": false,
+    "channels": 1,
+    "encoding": "wav/pcm",
+    "bit_depth": 16,
+    "endpointing": 0.05,
+    "sample_rate": 16000,
+    "pre_processing": {
+      "audio_enhancer": false,
+      "speech_threshold": 0.6
+    },
+    "language_config": {
+      "languages": [
+        "en"
+      ],
+      "code_switching": false
+    },
+    "messages_config": {
+      "receive_errors": true,
+      "receive_speech_events": false,
+      "receive_acknowledgments": true,
+      "receive_lifecycle_events": false,
+      "receive_final_transcripts": true,
+      "receive_partial_transcripts": true,
+      "receive_pre_processing_events": false,
+      "receive_post_processing_events": true,
+      "receive_realtime_processing_events": true
+    },
+    "post_processing": {
+      "summarization": false,
+      "chapterization": false
+    },
+    "realtime_processing": {
+      "translation": false,
+      "custom_spelling": false,
+      "emotion_analysis": false,
+      "custom_vocabulary": false,
+      "sentiment_analysis": false,
+      "named_entity_recognition": false,
+      "words_accurate_timestamps": true,
+      "structured_data_extraction": false
+    },
+    "maximum_duration_without_endpointing": 5
+  },
+  "result": {
+    "metadata": {
+      "audio_duration": 28,
+      "billing_time": 28,
+      "number_of_distinct_channels": 1,
+      "transcription_time": 30.306
+    },
+    "transcription": {
+      "languages": [
+        "en"
+      ],
+      "utterances": [
+        {
+          "text": "The AFC Under-20 Women Asian Cup.",
+          "start": 2.888,
+          "end": 5.343,
+          "language": "en",
+          "confidence": 0.9349999999999999,
+          "channel": 0,
+          "words": [
+            {
+              "word": "The",
+              "start": 2.888,
+              "end": 3.008,
+              "confidence": 0.98
+            },
+            {
+              "word": " AFC",
+              "start": 3.089,
+              "end": 3.411,
+              "confidence": 0.98
+            },
+            {
+              "word": " Under-20",
+              "start": 3.773,
+              "end": 3.975,
+              "confidence": 0.99
+            },
+            {
+              "word": " Women",
+              "start": 4.518,
+              "end": 4.74,
+              "confidence": 0.95
+            },
+            {
+              "word": " Asian",
+              "start": 4.82,
+              "end": 5.062,
+              "confidence": 0.94
+            },
+            {
+              "word": " Cup.",
+              "start": 5.142,
+              "end": 5.343,
+              "confidence": 0.77
+            }
+          ]
+        },
+        {
+          "text": "Thailand 2026 enters the business end with the quarterfinals to be played over the weekend.",
+          "start": 5.647,
+          "end": 10.995,
+          "language": "en",
+          "confidence": 0.8706666666666667,
+          "channel": 0,
+          "words": [
+            {
+              "word": " Thailand",
+              "start": 5.647,
+              "end": 6.108,
+              "confidence": 0.63
+            },
+            {
+              "word": " 2026",
+              "start": 6.109,
+              "end": 7.049,
+              "confidence": 0
+            },
+            {
+              "word": " enters",
+              "start": 7.65,
+              "end": 7.891,
+              "confidence": 1
+            },
+            {
+              "word": " the",
+              "start": 7.892,
+              "end": 8.011,
+              "confidence": 0.95
+            },
+            {
+              "word": " business",
+              "start": 8.031,
+              "end": 8.351,
+              "confidence": 1
+            },
+            {
+              "word": " end",
+              "start": 8.451,
+              "end": 8.652,
+              "confidence": 1
+            },
+            {
+              "word": " with",
+              "start": 8.772,
+              "end": 8.892,
+              "confidence": 1
+            },
+            {
+              "word": " the",
+              "start": 8.893,
+              "end": 8.992,
+              "confidence": 0.99
+            },
+            {
+              "word": " quarterfinals",
+              "start": 8.993,
+              "end": 9.753,
+              "confidence": 0.66
+            },
+            {
+              "word": " to",
+              "start": 9.773,
+              "end": 9.893,
+              "confidence": 1
+            },
+            {
+              "word": " be",
+              "start": 9.894,
+              "end": 9.993,
+              "confidence": 1
+            },
+            {
+              "word": " played",
+              "start": 10.014,
+              "end": 10.294,
+              "confidence": 0.99
+            },
+            {
+              "word": " over",
+              "start": 10.314,
+              "end": 10.454,
+              "confidence": 1
+            },
+            {
+              "word": " the",
+              "start": 10.455,
+              "end": 10.574,
+              "confidence": 0.85
+            },
+            {
+              "word": " weekend.",
+              "start": 10.575,
+              "end": 10.995,
+              "confidence": 0.99
+            }
+          ]
+        },
+        {
+          "text": "All four ties promise to be scintillating affairs.",
+          "start": 12.14,
+          "end": 14.678,
+          "language": "en",
+          "confidence": 0.94625,
+          "channel": 0,
+          "words": [
+            {
+              "word": " All",
+              "start": 12.14,
+              "end": 12.301,
+              "confidence": 0.99
+            },
+            {
+              "word": " four",
+              "start": 12.401,
+              "end": 12.603,
+              "confidence": 0.98
+            },
+            {
+              "word": " ties",
+              "start": 12.663,
+              "end": 13.046,
+              "confidence": 0.88
+            },
+            {
+              "word": " promise",
+              "start": 13.106,
+              "end": 13.389,
+              "confidence": 0.98
+            },
+            {
+              "word": " to",
+              "start": 13.39,
+              "end": 13.509,
+              "confidence": 0.99
+            },
+            {
+              "word": " be",
+              "start": 13.51,
+              "end": 13.61,
+              "confidence": 0.99
+            },
+            {
+              "word": " scintillating",
+              "start": 13.691,
+              "end": 14.275,
+              "confidence": 0.77
+            },
+            {
+              "word": " affairs.",
+              "start": 14.295,
+              "end": 14.678,
+              "confidence": 0.99
+            }
+          ]
+        },
+        {
+          "text": "after an exciting group stage which saw thrills, spills and more.",
+          "start": 15.261,
+          "end": 19.097,
+          "language": "en",
+          "confidence": 0.9118181818181817,
+          "channel": 0,
+          "words": [
+            {
+              "word": " after",
+              "start": 15.261,
+              "end": 15.461,
+              "confidence": 1
+            },
+            {
+              "word": " an",
+              "start": 15.462,
+              "end": 15.562,
+              "confidence": 1
+            },
+            {
+              "word": " exciting",
+              "start": 15.563,
+              "end": 16.024,
+              "confidence": 0.98
+            },
+            {
+              "word": " group",
+              "start": 16.064,
+              "end": 16.265,
+              "confidence": 1
+            },
+            {
+              "word": " stage",
+              "start": 16.325,
+              "end": 16.687,
+              "confidence": 0.98
+            },
+            {
+              "word": " which",
+              "start": 16.868,
+              "end": 17.028,
+              "confidence": 0.99
+            },
+            {
+              "word": " saw",
+              "start": 17.089,
+              "end": 17.229,
+              "confidence": 0.87
+            },
+            {
+              "word": " thrills,",
+              "start": 17.35,
+              "end": 17.792,
+              "confidence": 0.89
+            },
+            {
+              "word": " spills",
+              "start": 18.033,
+              "end": 18.515,
+              "confidence": 0.9
+            },
+            {
+              "word": " and",
+              "start": 18.716,
+              "end": 18.856,
+              "confidence": 0.71
+            },
+            {
+              "word": " more.",
+              "start": 18.896,
+              "end": 19.097,
+              "confidence": 0.71
+            }
+          ]
+        },
+        {
+          "text": "Join theafc.com in our preview of the quarterfinals.",
+          "start": 20.18,
+          "end": 23.38,
+          "language": "en",
+          "confidence": 0.91125,
+          "channel": 0,
+          "words": [
+            {
+              "word": " Join",
+              "start": 20.18,
+              "end": 20.382,
+              "confidence": 0.94
+            },
+            {
+              "word": " theafc.com",
+              "start": 20.422,
+              "end": 21.428,
+              "confidence": 0.95
+            },
+            {
+              "word": " in",
+              "start": 21.609,
+              "end": 21.73,
+              "confidence": 1
+            },
+            {
+              "word": " our",
+              "start": 21.75,
+              "end": 21.871,
+              "confidence": 0.83
+            },
+            {
+              "word": " preview",
+              "start": 21.911,
+              "end": 22.333,
+              "confidence": 0.92
+            },
+            {
+              "word": " of",
+              "start": 22.474,
+              "end": 22.595,
+              "confidence": 1
+            },
+            {
+              "word": " the",
+              "start": 22.596,
+              "end": 22.676,
+              "confidence": 1
+            },
+            {
+              "word": " quarterfinals.",
+              "start": 22.696,
+              "end": 23.38,
+              "confidence": 0.65
+            }
+          ]
+        }
+      ],
+      "full_transcript": "The AFC Under-20 Women Asian Cup. Thailand 2026 enters the business end with the quarterfinals to be played over the weekend. All four ties promise to be scintillating affairs. after an exciting group stage which saw thrills, spills and more. Join theafc.com in our preview of the quarterfinals."
+    },
+    "messages": [
+      {
+        "type": "transcript",
+        "session_id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
+        "created_at": "2026-04-11T10:53:36.977Z",
+        "data": {
+          "id": "00_00000000",
+          "is_final": true,
+          "utterance": {
+            "text": "The AFC Under-20 Women Asian Cup.",
+            "start": 2.888,
+            "end": 5.343,
+            "language": "en",
+            "confidence": 0.9349999999999999,
+            "channel": 0,
+            "words": [
+              {
+                "word": "The",
+                "start": 2.888,
+                "end": 3.008,
+                "confidence": 0.98
+              },
+              {
+                "word": " AFC",
+                "start": 3.089,
+                "end": 3.411,
+                "confidence": 0.98
+              },
+              {
+                "word": " Under-20",
+                "start": 3.773,
+                "end": 3.975,
+                "confidence": 0.99
+              },
+              {
+                "word": " Women",
+                "start": 4.518,
+                "end": 4.74,
+                "confidence": 0.95
+              },
+              {
+                "word": " Asian",
+                "start": 4.82,
+                "end": 5.062,
+                "confidence": 0.94
+              },
+              {
+                "word": " Cup.",
+                "start": 5.142,
+                "end": 5.343,
+                "confidence": 0.77
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
+        "created_at": "2026-04-11T10:53:42.626Z",
+        "data": {
+          "id": "00_00000001",
+          "is_final": true,
+          "utterance": {
+            "text": "Thailand 2026 enters the business end with the quarterfinals to be played over the weekend.",
+            "start": 5.647,
+            "end": 10.995,
+            "language": "en",
+            "confidence": 0.8706666666666667,
+            "channel": 0,
+            "words": [
+              {
+                "word": " Thailand",
+                "start": 5.647,
+                "end": 6.108,
+                "confidence": 0.63
+              },
+              {
+                "word": " 2026",
+                "start": 6.109,
+                "end": 7.049,
+                "confidence": 0
+              },
+              {
+                "word": " enters",
+                "start": 7.65,
+                "end": 7.891,
+                "confidence": 1
+              },
+              {
+                "word": " the",
+                "start": 7.892,
+                "end": 8.011,
+                "confidence": 0.95
+              },
+              {
+                "word": " business",
+                "start": 8.031,
+                "end": 8.351,
+                "confidence": 1
+              },
+              {
+                "word": " end",
+                "start": 8.451,
+                "end": 8.652,
+                "confidence": 1
+              },
+              {
+                "word": " with",
+                "start": 8.772,
+                "end": 8.892,
+                "confidence": 1
+              },
+              {
+                "word": " the",
+                "start": 8.893,
+                "end": 8.992,
+                "confidence": 0.99
+              },
+              {
+                "word": " quarterfinals",
+                "start": 8.993,
+                "end": 9.753,
+                "confidence": 0.66
+              },
+              {
+                "word": " to",
+                "start": 9.773,
+                "end": 9.893,
+                "confidence": 1
+              },
+              {
+                "word": " be",
+                "start": 9.894,
+                "end": 9.993,
+                "confidence": 1
+              },
+              {
+                "word": " played",
+                "start": 10.014,
+                "end": 10.294,
+                "confidence": 0.99
+              },
+              {
+                "word": " over",
+                "start": 10.314,
+                "end": 10.454,
+                "confidence": 1
+              },
+              {
+                "word": " the",
+                "start": 10.455,
+                "end": 10.574,
+                "confidence": 0.85
+              },
+              {
+                "word": " weekend.",
+                "start": 10.575,
+                "end": 10.995,
+                "confidence": 0.99
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
+        "created_at": "2026-04-11T10:53:46.287Z",
+        "data": {
+          "id": "00_00000002",
+          "is_final": true,
+          "utterance": {
+            "text": "All four ties promise to be scintillating affairs.",
+            "start": 12.14,
+            "end": 14.678,
+            "language": "en",
+            "confidence": 0.94625,
+            "channel": 0,
+            "words": [
+              {
+                "word": " All",
+                "start": 12.14,
+                "end": 12.301,
+                "confidence": 0.99
+              },
+              {
+                "word": " four",
+                "start": 12.401,
+                "end": 12.603,
+                "confidence": 0.98
+              },
+              {
+                "word": " ties",
+                "start": 12.663,
+                "end": 13.046,
+                "confidence": 0.88
+              },
+              {
+                "word": " promise",
+                "start": 13.106,
+                "end": 13.389,
+                "confidence": 0.98
+              },
+              {
+                "word": " to",
+                "start": 13.39,
+                "end": 13.509,
+                "confidence": 0.99
+              },
+              {
+                "word": " be",
+                "start": 13.51,
+                "end": 13.61,
+                "confidence": 0.99
+              },
+              {
+                "word": " scintillating",
+                "start": 13.691,
+                "end": 14.275,
+                "confidence": 0.77
+              },
+              {
+                "word": " affairs.",
+                "start": 14.295,
+                "end": 14.678,
+                "confidence": 0.99
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
+        "created_at": "2026-04-11T10:53:50.768Z",
+        "data": {
+          "id": "00_00000003",
+          "is_final": true,
+          "utterance": {
+            "text": "after an exciting group stage which saw thrills, spills and more.",
+            "start": 15.261,
+            "end": 19.097,
+            "language": "en",
+            "confidence": 0.9118181818181817,
+            "channel": 0,
+            "words": [
+              {
+                "word": " after",
+                "start": 15.261,
+                "end": 15.461,
+                "confidence": 1
+              },
+              {
+                "word": " an",
+                "start": 15.462,
+                "end": 15.562,
+                "confidence": 1
+              },
+              {
+                "word": " exciting",
+                "start": 15.563,
+                "end": 16.024,
+                "confidence": 0.98
+              },
+              {
+                "word": " group",
+                "start": 16.064,
+                "end": 16.265,
+                "confidence": 1
+              },
+              {
+                "word": " stage",
+                "start": 16.325,
+                "end": 16.687,
+                "confidence": 0.98
+              },
+              {
+                "word": " which",
+                "start": 16.868,
+                "end": 17.028,
+                "confidence": 0.99
+              },
+              {
+                "word": " saw",
+                "start": 17.089,
+                "end": 17.229,
+                "confidence": 0.87
+              },
+              {
+                "word": " thrills,",
+                "start": 17.35,
+                "end": 17.792,
+                "confidence": 0.89
+              },
+              {
+                "word": " spills",
+                "start": 18.033,
+                "end": 18.515,
+                "confidence": 0.9
+              },
+              {
+                "word": " and",
+                "start": 18.716,
+                "end": 18.856,
+                "confidence": 0.71
+              },
+              {
+                "word": " more.",
+                "start": 18.896,
+                "end": 19.097,
+                "confidence": 0.71
+              }
+            ]
+          }
+        }
+      },
+      {
+        "type": "transcript",
+        "session_id": "145a444d-54cf-4d87-b2d7-6c367bf1c62a",
+        "created_at": "2026-04-11T10:53:55.052Z",
+        "data": {
+          "id": "00_00000004",
+          "is_final": true,
+          "utterance": {
+            "text": "Join theafc.com in our preview of the quarterfinals.",
+            "start": 20.18,
+            "end": 23.38,
+            "language": "en",
+            "confidence": 0.91125,
+            "channel": 0,
+            "words": [
+              {
+                "word": " Join",
+                "start": 20.18,
+                "end": 20.382,
+                "confidence": 0.94
+              },
+              {
+                "word": " theafc.com",
+                "start": 20.422,
+                "end": 21.428,
+                "confidence": 0.95
+              },
+              {
+                "word": " in",
+                "start": 21.609,
+                "end": 21.73,
+                "confidence": 1
+              },
+              {
+                "word": " our",
+                "start": 21.75,
+                "end": 21.871,
+                "confidence": 0.83
+              },
+              {
+                "word": " preview",
+                "start": 21.911,
+                "end": 22.333,
+                "confidence": 0.92
+              },
+              {
+                "word": " of",
+                "start": 22.474,
+                "end": 22.595,
+                "confidence": 1
+              },
+              {
+                "word": " the",
+                "start": 22.596,
+                "end": 22.676,
+                "confidence": 1
+              },
+              {
+                "word": " quarterfinals.",
+                "start": 22.696,
+                "end": 23.38,
+                "confidence": 0.65
+              }
+            ]
+          }
+        }
+      }
+    ]
+  },
+  "external_translation": {
+    "provider": "openai_compatible",
+    "model": "deepseek-chat",
+    "target_language": "zh",
+    "utterances": [
+      {
+        "start": 2.888,
+        "end": 5.343,
+        "source_text": "The AFC Under-20 Women Asian Cup.",
+        "translated_text": "亚足联U20女足亚洲杯。"
+      },
+      {
+        "start": 5.647,
+        "end": 10.995,
+        "source_text": "Thailand 2026 enters the business end with the quarterfinals to be played over the weekend.",
+        "translated_text": "2026年泰国赛事进入关键阶段，四分之一决赛将于本周末打响。"
+      },
+      {
+        "start": 12.14,
+        "end": 14.678,
+        "source_text": "All four ties promise to be scintillating affairs.",
+        "translated_text": "四场对决均有望呈现精彩较量。"
+      },
+      {
+        "start": 15.261,
+        "end": 19.097,
+        "source_text": "after an exciting group stage which saw thrills, spills and more.",
+        "translated_text": "经过小组赛阶段扣人心弦的激战与意外。"
+      },
+      {
+        "start": 20.18,
+        "end": 23.38,
+        "source_text": "Join theafc.com in our preview of the quarterfinals.",
+        "translated_text": "欢迎访问亚足联官网，与我们一同前瞻四分之一决赛。"
+      }
+    ]
+  }
+}

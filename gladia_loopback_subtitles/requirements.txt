@@ -1,0 +1,6 @@
+numpy<2
+pyaudiowpatch
+python-dotenv
+requests
+soundcard
+websockets
