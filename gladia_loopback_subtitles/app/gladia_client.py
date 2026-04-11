@@ -11,7 +11,7 @@ import websockets
 
 from .config import Settings
 from .transcript_store import TranscriptStore
-from .utils import append_runtime_log, clean_text
+from .utils import clean_text, emit_runtime_message
 
 
 @dataclass(slots=True)
@@ -53,7 +53,7 @@ class GladiaLiveClient:
             },
             "language_config": {
                 "languages": self.settings.source_languages,
-                "code_switching": False,
+                "code_switching": self.settings.code_switching,
             },
             "realtime_processing": {
                 "translation": not self.settings.use_external_translation,
@@ -148,16 +148,12 @@ class GladiaLiveClient:
 
             if data.get("is_final"):
                 self.transcript_store.store_final_source(utterance_id, utterance)
-                line = f"[FINAL][SRC] {text}"
-                print(line)
-                append_runtime_log(line)
+                emit_runtime_message(f"[FINAL][SRC] {text}")
                 if self.on_final_transcript is not None:
                     self.on_final_transcript(utterance_id, utterance)
             else:
                 self.transcript_store.store_partial(text)
-                line = f"[PARTIAL] {text}"
-                print(line)
-                append_runtime_log(line)
+                emit_runtime_message(f"[PARTIAL] {text}")
             return
 
         if message_type == "translation":
@@ -170,9 +166,7 @@ class GladiaLiveClient:
             self.transcript_store.store_translation(utterance_id, translated_utterance)
             target_language = translated_utterance.get("language") or data.get("target_language")
             if target_language == self.settings.target_language:
-                line = f"[FINAL][ZH] {translated_text}"
-                print(line)
-                append_runtime_log(line)
+                emit_runtime_message(f"[FINAL][ZH] {translated_text}")
             return
 
         if message_type == "error":

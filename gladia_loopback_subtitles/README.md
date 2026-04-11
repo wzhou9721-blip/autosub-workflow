@@ -121,6 +121,18 @@ Then run:
 python -m app.main
 ```
 
+For the desktop UI, run:
+
+```powershell
+python -m app.desktop_ui
+```
+
+Or just double-click:
+
+```text
+启动UI.bat
+```
+
 The app will:
 
 - Open Windows loopback capture on the default playback device
@@ -139,6 +151,23 @@ Press `Enter` in the terminal to stop gracefully. The program will send `stop_re
 
 - `output/output.srt`
 - `output/output.json`
+
+## 桌面 UI
+
+桌面 UI 沿用了你 `AutoSub` 的原生 Python 桌面方向，但保持成单窗口最小实现。
+
+可选项：
+
+- `主语言`：选择主要语音语言，也可以选 `自动检测`
+- `开启双语言识别`：可以再选一个第二语言，并启用 Gladia 的 code switching
+- `开启降噪增强`：在外放、底噪更明显的场景下开启音频增强
+
+界面会显示：
+
+- 当前运行状态
+- 开始 / 停止按钮
+- 实时日志，包括 `[PARTIAL]`、`[FINAL][SRC]`、`[FINAL][ZH]`
+- 一键打开导出的 SRT 或输出目录
 
 ## Notes
 

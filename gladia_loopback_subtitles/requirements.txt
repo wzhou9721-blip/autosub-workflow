@@ -1,5 +1,6 @@
 numpy<2
 pyaudiowpatch
+PyQt6
 python-dotenv
 requests
 soundcard

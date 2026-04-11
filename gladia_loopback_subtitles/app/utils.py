@@ -3,14 +3,20 @@ from __future__ import annotations
 import json
 import re
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 _LOG_FILE_PATH: Path | None = None
+_MESSAGE_LISTENER: Callable[[str], None] | None = None
 
 
 def configure_runtime_log(path: Path) -> None:
     global _LOG_FILE_PATH
     _LOG_FILE_PATH = path
+
+
+def set_runtime_message_listener(listener: Callable[[str], None] | None) -> None:
+    global _MESSAGE_LISTENER
+    _MESSAGE_LISTENER = listener
 
 
 def append_runtime_log(message: str) -> None:
@@ -19,6 +25,13 @@ def append_runtime_log(message: str) -> None:
     _LOG_FILE_PATH.parent.mkdir(parents=True, exist_ok=True)
     with _LOG_FILE_PATH.open("a", encoding="utf-8") as handle:
         handle.write(f"{message}\n")
+
+
+def emit_runtime_message(message: str) -> None:
+    print(message)
+    append_runtime_log(message)
+    if _MESSAGE_LISTENER is not None:
+        _MESSAGE_LISTENER(message)
 
 
 def ensure_directory(path: Path) -> None:
@@ -46,9 +59,7 @@ def normalize_cjk_spacing(text: str) -> str:
 
 
 def log_info(message: str) -> None:
-    line = f"[INFO] {message}"
-    print(line)
-    append_runtime_log(line)
+    emit_runtime_message(f"[INFO] {message}")
 
 
 def pick_result_root(result_payload: dict[str, Any]) -> dict[str, Any]:

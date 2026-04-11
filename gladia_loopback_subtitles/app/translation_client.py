@@ -8,7 +8,7 @@ import requests
 
 from .config import Settings
 from .transcript_store import TranscriptStore
-from .utils import append_runtime_log, clean_text
+from .utils import clean_text, emit_runtime_message
 
 
 class ExternalTranslationClient:
@@ -44,9 +44,9 @@ class ExternalTranslationClient:
             return ["" for _ in utterances]
 
         system_prompt = (
-            "You are a professional subtitle translator. Translate English subtitles into natural, concise "
-            "Simplified Chinese for on-screen captions. Preserve meaning, names, numbers, URLs, and football "
-            "competition titles accurately. Do not add explanations. Return JSON only."
+            "You are a professional subtitle translator. Translate subtitle lines into natural, concise "
+            "Simplified Chinese for on-screen captions. Preserve meaning, names, numbers, URLs, and competition "
+            "titles accurately. Do not add explanations. Return JSON only."
         )
         user_prompt = (
             "Translate the following subtitle lines into Simplified Chinese.\n"
@@ -225,9 +225,7 @@ class RealtimeTranslationCoordinator:
                 "end": utterance.get("end"),
             },
         )
-        line = f"[FINAL][ZH] {translated_text}"
-        print(line)
-        append_runtime_log(line)
+        emit_runtime_message(f"[FINAL][ZH] {translated_text}")
 
     @staticmethod
     def _utterance_id(utterance: dict[str, Any]) -> str:

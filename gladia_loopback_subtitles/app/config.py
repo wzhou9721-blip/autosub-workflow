@@ -1,9 +1,8 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
-from typing import Optional
 
 from dotenv import load_dotenv
 
@@ -14,6 +13,7 @@ class Settings:
     gladia_base_url: str
     gladia_model: str
     source_languages: list[str]
+    code_switching: bool
     target_language: str
     use_external_translation: bool
     gladia_translation_model: str
@@ -87,6 +87,7 @@ def load_settings() -> Settings:
         gladia_base_url=os.getenv("GLADIA_BASE_URL", "https://api.gladia.io").rstrip("/"),
         gladia_model=os.getenv("GLADIA_MODEL", "solaria-1"),
         source_languages=_parse_languages(os.getenv("GLADIA_SOURCE_LANGUAGES")),
+        code_switching=_parse_bool(os.getenv("GLADIA_CODE_SWITCHING"), False),
         target_language=os.getenv("GLADIA_TARGET_LANGUAGE", "zh").strip() or "zh",
         use_external_translation=use_external_translation,
         gladia_translation_model=os.getenv("GLADIA_TRANSLATION_MODEL", "enhanced").strip() or "enhanced",
@@ -125,4 +126,19 @@ def load_settings() -> Settings:
         runtime_log_path=output_dir / "runtime.log",
         result_poll_interval_seconds=float(os.getenv("RESULT_POLL_INTERVAL_SECONDS", "2")),
         result_poll_timeout_seconds=float(os.getenv("RESULT_POLL_TIMEOUT_SECONDS", "120")),
+    )
+
+
+def build_runtime_settings(
+    settings: Settings,
+    *,
+    source_languages: list[str] | None = None,
+    code_switching: bool | None = None,
+    audio_enhancer: bool | None = None,
+) -> Settings:
+    return replace(
+        settings,
+        source_languages=source_languages if source_languages is not None else settings.source_languages,
+        code_switching=code_switching if code_switching is not None else settings.code_switching,
+        audio_enhancer=audio_enhancer if audio_enhancer is not None else settings.audio_enhancer,
     )
