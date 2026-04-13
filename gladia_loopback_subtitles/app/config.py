@@ -12,6 +12,7 @@ class Settings:
     gladia_api_key: str
     gladia_base_url: str
     gladia_model: str
+    transcription_mode: str
     source_languages: list[str]
     code_switching: bool
     target_language: str
@@ -59,6 +60,31 @@ def _parse_bool(value: str | None, default: bool) -> bool:
     return value.strip().lower() in {"1", "true", "yes", "y", "on"}
 
 
+def _normalize_transcription_mode(value: str | None) -> str:
+    normalized = (value or "").strip().lower()
+    if normalized in {"fast", "balanced", "high_quality"}:
+        return normalized
+    return "balanced"
+
+
+def _profiled_endpointing(mode: str, fallback: float) -> float:
+    profiles = {
+        "fast": 0.05,
+        "balanced": 0.35,
+        "high_quality": 0.8,
+    }
+    return profiles.get(mode, fallback)
+
+
+def _profiled_max_without_endpointing(mode: str, fallback: float) -> float:
+    profiles = {
+        "fast": 5.0,
+        "balanced": 15.0,
+        "high_quality": 20.0,
+    }
+    return profiles.get(mode, fallback)
+
+
 def load_settings() -> Settings:
     load_dotenv()
 
@@ -87,6 +113,7 @@ def load_settings() -> Settings:
         gladia_api_key=api_key,
         gladia_base_url=os.getenv("GLADIA_BASE_URL", "https://api.gladia.io").rstrip("/"),
         gladia_model=os.getenv("GLADIA_MODEL", "solaria-1"),
+        transcription_mode=_normalize_transcription_mode(os.getenv("TRANSCRIPTION_MODE")),
         source_languages=_parse_languages(os.getenv("GLADIA_SOURCE_LANGUAGES")),
         code_switching=_parse_bool(os.getenv("GLADIA_CODE_SWITCHING"), False),
         target_language=os.getenv("GLADIA_TARGET_LANGUAGE", "zh").strip() or "zh",
@@ -126,7 +153,7 @@ def load_settings() -> Settings:
         output_srt_path=output_dir / "output.srt",
         output_json_path=output_dir / "output.json",
         runtime_log_path=output_dir / "runtime.log",
-        result_poll_interval_seconds=float(os.getenv("RESULT_POLL_INTERVAL_SECONDS", "2")),
+        result_poll_interval_seconds=float(os.getenv("RESULT_POLL_INTERVAL_SECONDS", "1")),
         result_poll_timeout_seconds=float(os.getenv("RESULT_POLL_TIMEOUT_SECONDS", "120")),
     )
 
@@ -134,15 +161,23 @@ def load_settings() -> Settings:
 def build_runtime_settings(
     settings: Settings,
     *,
+    transcription_mode: str | None = None,
     source_languages: list[str] | None = None,
     code_switching: bool | None = None,
     audio_enhancer: bool | None = None,
     translation_frequency: int | None = None,
 ) -> Settings:
+    resolved_mode = _normalize_transcription_mode(transcription_mode or settings.transcription_mode)
     return replace(
         settings,
+        transcription_mode=resolved_mode,
         source_languages=source_languages if source_languages is not None else settings.source_languages,
         code_switching=code_switching if code_switching is not None else settings.code_switching,
         audio_enhancer=audio_enhancer if audio_enhancer is not None else settings.audio_enhancer,
         translation_frequency=translation_frequency if translation_frequency is not None else settings.translation_frequency,
+        endpointing=_profiled_endpointing(resolved_mode, settings.endpointing),
+        maximum_duration_without_endpointing=_profiled_max_without_endpointing(
+            resolved_mode,
+            settings.maximum_duration_without_endpointing,
+        ),
     )

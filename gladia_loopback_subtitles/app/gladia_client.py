@@ -11,7 +11,7 @@ import websockets
 
 from .config import Settings
 from .transcript_store import TranscriptStore
-from .utils import clean_text, emit_runtime_message
+from .utils import clean_text, emit_runtime_message, log_info
 
 
 @dataclass(slots=True)
@@ -130,9 +130,20 @@ class GladiaLiveClient:
                         if on_audio_level is not None:
                             on_audio_level(float(getattr(capture, "last_level", 0.0)))
                         await websocket.send(chunk)
+                    elif stop_event.is_set():
+                        break
             finally:
+                log_info("stop_recording requested")
                 await websocket.send(json.dumps({"type": "stop_recording"}))
-                await receiver_task
+                log_info("stop_recording sent")
+                try:
+                    await asyncio.wait_for(receiver_task, timeout=1.5)
+                    log_info("websocket receiver finished after stop")
+                except asyncio.TimeoutError:
+                    log_info("websocket receiver timeout after stop; cancelling receiver task")
+                    receiver_task.cancel()
+                    await asyncio.gather(receiver_task, return_exceptions=True)
+                    log_info("websocket receiver cancelled")
 
     async def _receive_messages(self, websocket: Any) -> None:
         try:
@@ -194,10 +205,13 @@ class GladiaLiveClient:
 
     def wait_for_final_result(self, session_id: str) -> dict[str, Any]:
         deadline = time.monotonic() + self.settings.result_poll_timeout_seconds
+        poll_count = 0
 
         while time.monotonic() < deadline:
+            poll_count += 1
             result = self.fetch_result(session_id)
             status = result.get("status")
+            log_info(f"poll #{poll_count} final result status={status}")
 
             if status == "done":
                 return result

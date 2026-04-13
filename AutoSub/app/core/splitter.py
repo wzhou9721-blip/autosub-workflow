@@ -16,6 +16,10 @@ _CHUNK_OVERLAP = 2
 # 断句结果不应跨越此类边界继续合并。
 _LONG_PAUSE_SPLIT_SEC = 0.5
 
+_READABILITY_RESCUE_DURATION_SEC = 0.55
+_READABILITY_RESCUE_SLACK_EN = 12
+_READABILITY_RESCUE_SLACK_CJK = 12
+
 
 class SubtitleSplitter:
     """
@@ -1325,6 +1329,10 @@ STRICT RULES:
                 if is_en:
                     curr_words = len(re.findall(r'\w+', curr['text']))
                     next_words = len(re.findall(r'\w+', next_seg['text']))
+                    curr_dur = max(0.0, curr.get('end', 0) - curr.get('start', 0))
+                    next_dur = max(0.0, next_seg.get('end', 0) - next_seg.get('start', 0))
+                    tiny_curr = curr_words <= 3 and curr_dur <= _READABILITY_RESCUE_DURATION_SEC
+                    tiny_next = next_words <= 3 and next_dur <= _READABILITY_RESCUE_DURATION_SEC
                     if curr_words + next_words <= max_en:
                         # 只在以下更严格的条件下才合并：
                         # 1. 某一侧极短（< min_en 词）
@@ -1344,16 +1352,32 @@ STRICT RULES:
                         # 防止"Tonight between wanting"这类孤儿短段独立成行
                         if curr_words <= 3 and curr_words + next_words <= max_en:
                             should_merge = True
+                        elif (
+                            (tiny_curr or tiny_next)
+                            and curr_words + next_words <= max_en + _READABILITY_RESCUE_SLACK_EN
+                        ):
+                            should_merge = True
 
                 else:
-                    if len(curr['text']) + len(next_seg['text']) <= max_cjk:
-                        if len(curr['text']) < min_cjk or len(next_seg['text']) < min_cjk:
+                    curr_len = len(curr['text'])
+                    next_len = len(next_seg['text'])
+                    curr_dur = max(0.0, curr.get('end', 0) - curr.get('start', 0))
+                    next_dur = max(0.0, next_seg.get('end', 0) - next_seg.get('start', 0))
+                    tiny_curr = curr_len <= 4 and curr_dur <= _READABILITY_RESCUE_DURATION_SEC
+                    tiny_next = next_len <= 4 and next_dur <= _READABILITY_RESCUE_DURATION_SEC
+                    if curr_len + next_len <= max_cjk:
+                        if curr_len < min_cjk or next_len < min_cjk:
                             should_merge = True
                         elif re.match(r'^(的|了|和|与|在|对|向|把|将|被|而|但|或|就|才)',
                                       next_seg['text'].strip()):
                             should_merge = True
-                        elif len(next_seg['text']) <= 2 and gap < 0.15:
+                        elif next_len <= 2 and gap < 0.15:
                             should_merge = True
+                    elif (
+                        (tiny_curr or tiny_next)
+                        and curr_len + next_len <= max_cjk + _READABILITY_RESCUE_SLACK_CJK
+                    ):
+                        should_merge = True
 
             if should_merge:
                 new_text = f"{curr['text']} {next_seg['text']}".replace("  ", " ").strip()

@@ -516,26 +516,29 @@ class BatchTranscriptionThread(QThread):
     @staticmethod
     def _apply_translation_result(batch: list[dict], result: list[dict]) -> None:
         result_map = {str(item.get("id")): item.get("cn", "") for item in result}
-        used_result_indexes = set()
-
-        for idx, item in enumerate(result):
-            item_id = str(item.get("id"))
-            if any(str(sub.get("index", 0)) == item_id for sub in batch):
-                used_result_indexes.add(idx)
+        hit_count = 0
 
         for sub in batch:
             key = str(sub.get("index", 0))
             if key in result_map:
                 sub["translated_text"] = result_map[key]
+                if (result_map[key] or "").strip():
+                    hit_count += 1
 
-        unfilled = [j for j, sub in enumerate(batch) if not (sub.get("translated_text") or "").strip()]
-        remaining_results = [item for idx, item in enumerate(result) if idx not in used_result_indexes]
-        if unfilled and remaining_results:
-            for k, j in enumerate(unfilled):
-                if k < len(remaining_results):
-                    cn = remaining_results[k].get("cn", "")
-                    if cn.strip():
-                        batch[j]["translated_text"] = cn
+        can_apply_by_order = (
+            hit_count == 0
+            and len(result) == len(batch)
+            and all((item.get("cn", "") or "").strip() for item in result)
+        )
+        if can_apply_by_order:
+            print("[BatchTranslation] No usable ids returned; applying translations by batch order.")
+            for sub, item in zip(batch, result):
+                sub["translated_text"] = item.get("cn", "")
+        elif 0 < hit_count < len(batch):
+            print(
+                f"[BatchTranslation] Partial id match ({hit_count}/{len(batch)}); "
+                "leaving unmatched subtitles on source text to avoid translation drift."
+            )
 
         BatchTranscriptionThread._fill_missing_translations(batch)
 

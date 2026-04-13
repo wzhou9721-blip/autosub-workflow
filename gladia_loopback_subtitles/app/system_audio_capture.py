@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import threading
+import time
 from dataclasses import dataclass
 from typing import Any
 
@@ -30,6 +32,7 @@ class SystemAudioCapture:
         self.backend = ""
         self.device_name = ""
         self.last_level = 0.0
+        self._stop_requested = threading.Event()
 
         self._frames_per_chunk = max(
             1, int(self.config.capture_sample_rate * self.config.chunk_duration_ms / 1000)
@@ -46,6 +49,7 @@ class SystemAudioCapture:
         self._recorder: Any | None = None
 
     def open(self) -> None:
+        self._stop_requested.clear()
         pyaudio_error: Exception | None = None
         if pyaudio is not None:
             try:
@@ -73,6 +77,7 @@ class SystemAudioCapture:
         raise RuntimeError("No supported Windows loopback backend is available.")
 
     def close(self) -> None:
+        self._stop_requested.set()
         if self._pyaudio_stream is not None:
             self._pyaudio_stream.stop_stream()
             self._pyaudio_stream.close()
@@ -87,10 +92,23 @@ class SystemAudioCapture:
             self._recorder_cm = None
             self._recorder = None
 
+    def request_stop(self) -> None:
+        self._stop_requested.set()
+
     def read_chunk(self) -> bytes:
         if self.backend == "pyaudiowpatch":
             if self._pyaudio_stream is None:
                 raise RuntimeError("PyAudio loopback stream is not open.")
+
+            while not self._stop_requested.is_set():
+                read_available = int(self._pyaudio_stream.get_read_available())
+                if read_available >= self._frames_per_chunk:
+                    break
+                time.sleep(0.01)
+
+            if self._stop_requested.is_set():
+                self.last_level = 0.0
+                return b""
 
             raw = self._pyaudio_stream.read(self._frames_per_chunk, exception_on_overflow=False)
             return self._prepare_interleaved_pcm16(
@@ -102,6 +120,10 @@ class SystemAudioCapture:
         if self.backend == "soundcard":
             if self._recorder is None:
                 raise RuntimeError("SoundCard recorder is not open.")
+
+            if self._stop_requested.is_set():
+                self.last_level = 0.0
+                return b""
 
             frames = self._recorder.record(numframes=self._frames_per_chunk)
             return self._prepare_float_frames(frames, self.config.capture_sample_rate)

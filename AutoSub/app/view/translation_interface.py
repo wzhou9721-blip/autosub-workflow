@@ -255,14 +255,15 @@ class TranslationThread(QThread):
                     idx = str(sub.get("index", 0))
                     if idx in result_map:
                         sub["translated_text"] = result_map[idx]
-                        hit_count += 1
-                if hit_count == 0 and translated_data:
+                        if (result_map[idx] or "").strip():
+                            hit_count += 1
+                if hit_count == 0 and len(translated_data) == len(batch):
                     print(f"[Translator] ID 匹配全部失败！batch index 范围: "
                           f"{batch[0].get('index')}~{batch[-1].get('index')}，"
                           f"返回 id 范围: {translated_data[0].get('id')}~{translated_data[-1].get('id')}")
                 # 位置顺序兜底：对仍无译文的条目，按返回顺序赋值（不再要求条数完全相等）
                 unfilled = [j for j, sub in enumerate(batch) if not (sub.get("translated_text") or "").strip()]
-                if unfilled and translated_data:
+                if hit_count == 0 and unfilled and len(translated_data) == len(batch):
                     for k, j in enumerate(unfilled):
                         if k < len(translated_data):
                             cn = translated_data[k].get("cn", "")
@@ -1045,7 +1046,7 @@ class SubtitleListWidget(QWidget):
                 return self._format_time_srt(sec or 0)
 
             def _write_srt_file(path, segs, mode):
-                with open(path, "w", encoding="utf-8") as f:
+                with open(path, "w", encoding="utf-8-sig") as f:
                     idx = 1
                     for d in segs:
                         orig = (d.get("text") or "").strip()
@@ -2277,7 +2278,7 @@ class TranslationInterface(QWidget):
 
     def _write_srt_segs(self, path, segs, mode):
         """将指定 segs 列表写入 SRT，供说话人分离导出使用。"""
-        with open(path, "w", encoding="utf-8") as f:
+        with open(path, "w", encoding="utf-8-sig") as f:
             idx = 1
             for sub in segs:
                 content = self._get_sub_content(sub, mode)
@@ -2288,7 +2289,7 @@ class TranslationInterface(QWidget):
                     idx += 1
 
     def _write_srt(self, path, mode):
-        with open(path, "w", encoding="utf-8") as f:
+        with open(path, "w", encoding="utf-8-sig") as f:
             for i, sub in enumerate(self.current_subtitles):
                 start = self._format_srt_time(sub.get("start", 0))
                 end = self._format_srt_time(sub.get("end", 0))

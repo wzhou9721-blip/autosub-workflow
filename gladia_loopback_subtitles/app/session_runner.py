@@ -29,6 +29,7 @@ class RuntimeOptions:
     dual_language_enabled: bool = False
     secondary_language: str = "zh"
     denoise_enabled: bool = False
+    transcription_mode: str = "balanced"
     translation_frequency: int = 1
 
     def build_source_languages(self) -> list[str]:
@@ -45,8 +46,14 @@ class RuntimeOptions:
             language_text = "自动检测"
         else:
             language_text = ", ".join(language_label(code) for code in codes)
+        mode_labels = {
+            "fast": "极速",
+            "balanced": "平衡",
+            "high_quality": "高质量",
+        }
         return (
             f"语言={language_text}; "
+            f"转录模式={mode_labels.get(self.transcription_mode, self.transcription_mode)}; "
             f"双语言={'开启' if self.dual_language_enabled else '关闭'}; "
             f"降噪={'开启' if self.denoise_enabled else '关闭'}; "
             f"翻译频率={max(1, self.translation_frequency)}"
@@ -73,6 +80,7 @@ class SessionRunner:
     def run(self, stop_signal: threading.Event, runtime_options: RuntimeOptions) -> None:
         settings = build_runtime_settings(
             self.base_settings,
+            transcription_mode=runtime_options.transcription_mode,
             source_languages=runtime_options.build_source_languages(),
             code_switching=runtime_options.dual_language_enabled,
             audio_enhancer=runtime_options.denoise_enabled,
@@ -127,11 +135,15 @@ class SessionRunner:
 
         try:
             self._status("starting")
-            capture.open()
+            log_info("starting capture initialization and live session creation")
+            capture_open_task = asyncio.create_task(asyncio.to_thread(capture.open))
+            create_session_task = asyncio.create_task(asyncio.to_thread(gladia_client.create_session))
+            await asyncio.gather(capture_open_task, create_session_task)
+            session = create_session_task.result()
             log_info(f"capture backend: {capture.backend} ({capture.device_name})")
             log_info(f"runtime options: {runtime_options.describe()}")
-            session = gladia_client.create_session()
             log_info(f"session started: {session.session_id}")
+            self._status("connecting")
             self._status("running")
 
             stream_task = asyncio.create_task(
@@ -150,17 +162,23 @@ class SessionRunner:
             )
 
             if stop_task in done:
+                log_info("stop signal observed by session runner")
                 stop_signal.set()
+                capture.request_stop()
                 self._status("stopping")
 
             if stop_task in pending:
                 stop_task.cancel()
                 await asyncio.gather(stop_task, return_exceptions=True)
 
+            log_info("awaiting websocket stream task completion")
             await stream_task
+            log_info("websocket stream task completed")
 
+            self._status("finalizing")
             log_info("waiting for final result")
             result = await asyncio.to_thread(gladia_client.wait_for_final_result, session.session_id)
+            log_info("final result received")
 
             translated_texts: list[str] | None = None
             if translation_coordinator is not None:
@@ -168,6 +186,7 @@ class SessionRunner:
                 if source_utterances:
                     log_info("finalizing external subtitle translations")
                     translated_texts = await translation_coordinator.backfill_missing(source_utterances)
+                    log_info("external subtitle translations finalized")
 
                     result = {
                         **result,
@@ -189,6 +208,7 @@ class SessionRunner:
                         },
                     }
 
+            self._status("saving")
             save_json(settings.output_json_path, result)
             subtitle_entries = transcript_store.build_subtitle_entries(result, translated_texts=translated_texts)
             write_srt(subtitle_entries, settings.output_srt_path)

@@ -8,7 +8,7 @@ import requests
 
 from .config import Settings
 from .transcript_store import TranscriptStore
-from .utils import clean_text, emit_runtime_message
+from .utils import clean_text, emit_runtime_message, log_info
 
 
 class ExternalTranslationClient:
@@ -35,6 +35,7 @@ class ExternalTranslationClient:
         return translations
 
     def _translate_batch(self, utterances: list[dict[str, Any]]) -> list[str]:
+        log_info(f"translation request started for {len(utterances)} utterance(s)")
         payload_items = [
             {"index": index, "text": clean_text(item.get("text"))}
             for index, item in enumerate(utterances)
@@ -74,6 +75,7 @@ class ExternalTranslationClient:
             raise RuntimeError(
                 f"Translation API request failed: {response.status_code} {response.text}"
             )
+        log_info(f"translation response received for {len(utterances)} utterance(s)")
 
         data = response.json()
         content = self._extract_content(data)
@@ -202,6 +204,7 @@ class RealtimeTranslationCoordinator:
             final_texts.append("")
 
         if missing_utterances:
+            log_info(f"backfill translating {len(missing_utterances)} missing utterance(s)")
             translated_batch = await asyncio.to_thread(self.client.translate_utterances, missing_utterances)
             for batch_index, translated in enumerate(translated_batch):
                 utterance = missing_utterances[batch_index]
@@ -237,6 +240,7 @@ class RealtimeTranslationCoordinator:
                 return
             batch = self._pending_batch[:]
             self._pending_batch.clear()
+        log_info(f"flushing realtime translation batch of {len(batch)} utterance(s)")
 
         async with self._semaphore:
             translated_list = await asyncio.to_thread(

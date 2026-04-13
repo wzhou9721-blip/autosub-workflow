@@ -37,6 +37,16 @@ from qfluentwidgets import (
 from .config import load_settings
 from .language_options import LANGUAGE_OPTIONS, language_label
 
+LANGUAGE_LABEL_TO_CODE = {label: value for label, value in LANGUAGE_OPTIONS}
+LANGUAGE_CODE_TO_LABEL = {value: label for label, value in LANGUAGE_OPTIONS}
+TRANSCRIPTION_MODE_OPTIONS = [
+    ("极速", "fast"),
+    ("平衡", "balanced"),
+    ("高质量", "high_quality"),
+]
+TRANSCRIPTION_MODE_LABEL_TO_VALUE = {label: value for label, value in TRANSCRIPTION_MODE_OPTIONS}
+TRANSCRIPTION_MODE_VALUE_TO_LABEL = {value: label for label, value in TRANSCRIPTION_MODE_OPTIONS}
+
 DUO_COLORS = {
     "primary": "#3FA266",
     "primary_pressed": "#368C58",
@@ -60,8 +70,11 @@ DUO_COLORS = {
 STATUS_META = {
     "idle": ("空闲", DUO_COLORS["surface_alt"], DUO_COLORS["text_secondary"]),
     "starting": ("启动中", DUO_COLORS["warning_soft"], DUO_COLORS["warning"]),
+    "connecting": ("连接中", DUO_COLORS["info_soft"], DUO_COLORS["info"]),
     "running": ("运行中", DUO_COLORS["danger_soft"], DUO_COLORS["danger"]),
     "stopping": ("停止中", DUO_COLORS["warning_soft"], DUO_COLORS["warning"]),
+    "finalizing": ("收尾中", DUO_COLORS["warning_soft"], DUO_COLORS["warning"]),
+    "saving": ("导出中", DUO_COLORS["info_soft"], DUO_COLORS["info"]),
     "completed": ("已完成", DUO_COLORS["primary_soft"], "#72D18D"),
     "failed": ("失败", DUO_COLORS["danger_soft"], DUO_COLORS["danger"]),
 }
@@ -77,8 +90,9 @@ class SessionWorker(QThread):
     final_translation = pyqtSignal(str, str)
     audio_level = pyqtSignal(float)
 
-    def __init__(self, runtime_options: Any) -> None:
+    def __init__(self, base_settings: Any, runtime_options: Any) -> None:
         super().__init__()
+        self.base_settings = base_settings
         self.runtime_options = runtime_options
         self.stop_signal = threading.Event()
 
@@ -86,9 +100,8 @@ class SessionWorker(QThread):
         try:
             from .session_runner import SessionCallbacks, SessionRunner
 
-            settings = load_settings()
             runner = SessionRunner(
-                settings,
+                self.base_settings,
                 SessionCallbacks(
                     on_log=self.log_message.emit,
                     on_status=self.status_changed.emit,
@@ -189,6 +202,7 @@ class SubtitleHistoryItem(QFrame):
 class FloatingSubtitleWindow(QWidget):
     def __init__(self) -> None:
         super().__init__()
+        self.base_settings = load_settings()
         self.worker: SessionWorker | None = None
         self.last_srt_path = ""
         self.last_json_path = ""
@@ -218,6 +232,7 @@ class FloatingSubtitleWindow(QWidget):
         self._update_secondary_language_enabled()
         self._refresh_buttons(running=False)
         self._set_status("idle")
+        self._prewarm_runtime_stack()
 
     def _build_ui(self) -> None:
         outer_layout = QVBoxLayout(self)
@@ -336,12 +351,16 @@ class FloatingSubtitleWindow(QWidget):
 
         self.primaryLanguageCombo = ComboBox(self.settingsPanel)
         self.secondaryLanguageCombo = ComboBox(self.settingsPanel)
+        self.transcriptionModeCombo = ComboBox(self.settingsPanel)
         self.translationFrequencySpin = QSpinBox(self.settingsPanel)
-        for label, value in LANGUAGE_OPTIONS:
-            self.primaryLanguageCombo.addItem(label, value)
-            self.secondaryLanguageCombo.addItem(label, value)
+        for label, _value in LANGUAGE_OPTIONS:
+            self.primaryLanguageCombo.addItem(label)
+            self.secondaryLanguageCombo.addItem(label)
+        for label, _value in TRANSCRIPTION_MODE_OPTIONS:
+            self.transcriptionModeCombo.addItem(label)
         self.primaryLanguageCombo.setMaxVisibleItems(8)
         self.secondaryLanguageCombo.setMaxVisibleItems(8)
+        self.transcriptionModeCombo.setMaxVisibleItems(3)
         self.translationFrequencySpin.setRange(1, 10)
         self.translationFrequencySpin.setValue(1)
         self.translationFrequencySpin.setSingleStep(1)
@@ -352,14 +371,16 @@ class FloatingSubtitleWindow(QWidget):
 
         settings_layout.addWidget(CaptionLabel("主语言", self.settingsPanel), 0, 0)
         settings_layout.addWidget(self.primaryLanguageCombo, 0, 1)
-        settings_layout.addWidget(CaptionLabel("双语言", self.settingsPanel), 0, 2)
-        settings_layout.addWidget(self.dualLanguageSwitch, 0, 3)
-        settings_layout.addWidget(CaptionLabel("第二语言", self.settingsPanel), 1, 0)
-        settings_layout.addWidget(self.secondaryLanguageCombo, 1, 1)
-        settings_layout.addWidget(CaptionLabel("翻译频率", self.settingsPanel), 1, 2)
-        settings_layout.addWidget(self.translationFrequencySpin, 1, 3)
-        settings_layout.addWidget(CaptionLabel("降噪增强", self.settingsPanel), 2, 0)
-        settings_layout.addWidget(self.denoiseSwitch, 2, 1)
+        settings_layout.addWidget(CaptionLabel("转录模式", self.settingsPanel), 0, 2)
+        settings_layout.addWidget(self.transcriptionModeCombo, 0, 3)
+        settings_layout.addWidget(CaptionLabel("双语言", self.settingsPanel), 1, 0)
+        settings_layout.addWidget(self.dualLanguageSwitch, 1, 1)
+        settings_layout.addWidget(CaptionLabel("第二语言", self.settingsPanel), 1, 2)
+        settings_layout.addWidget(self.secondaryLanguageCombo, 1, 3)
+        settings_layout.addWidget(CaptionLabel("翻译频率", self.settingsPanel), 2, 0)
+        settings_layout.addWidget(self.translationFrequencySpin, 2, 1)
+        settings_layout.addWidget(CaptionLabel("降噪增强", self.settingsPanel), 2, 2)
+        settings_layout.addWidget(self.denoiseSwitch, 2, 3)
         root_layout.addWidget(self.settingsPanel)
         self.settingsPanel.hide()
 
@@ -383,8 +404,20 @@ class FloatingSubtitleWindow(QWidget):
         action_layout.addWidget(self.openFolderButton)
         root_layout.addLayout(action_layout)
 
+    def _prewarm_runtime_stack(self) -> None:
+        def _load() -> None:
+            try:
+                from . import gladia_client as _gladia_client  # noqa: F401
+                from . import session_runner as _session_runner  # noqa: F401
+                from . import system_audio_capture as _system_audio_capture  # noqa: F401
+                from . import translation_client as _translation_client  # noqa: F401
+            except Exception:
+                return
+
+        threading.Thread(target=_load, daemon=True).start()
+
     def _apply_initial_values(self) -> None:
-        settings = load_settings()
+        settings = self.base_settings
         source_languages = settings.source_languages or [""]
         primary = source_languages[0]
         secondary = source_languages[1] if len(source_languages) > 1 else "zh"
@@ -392,6 +425,7 @@ class FloatingSubtitleWindow(QWidget):
 
         self._set_combo_value(self.primaryLanguageCombo, primary)
         self._set_combo_value(self.secondaryLanguageCombo, secondary)
+        self._set_combo_value(self.transcriptionModeCombo, settings.transcription_mode)
         self.dualLanguageSwitch.setChecked(dual_enabled)
         self.denoiseSwitch.setChecked(settings.audio_enhancer)
         self.translationFrequencySpin.setValue(max(1, settings.translation_frequency))
@@ -400,15 +434,23 @@ class FloatingSubtitleWindow(QWidget):
         from .session_runner import RuntimeOptions
 
         return RuntimeOptions(
-            primary_language=str(self.primaryLanguageCombo.currentData() or ""),
+            primary_language=LANGUAGE_LABEL_TO_CODE.get(self.primaryLanguageCombo.currentText(), ""),
             dual_language_enabled=self.dualLanguageSwitch.isChecked(),
-            secondary_language=str(self.secondaryLanguageCombo.currentData() or ""),
+            secondary_language=LANGUAGE_LABEL_TO_CODE.get(self.secondaryLanguageCombo.currentText(), ""),
             denoise_enabled=self.denoiseSwitch.isChecked(),
+            transcription_mode=TRANSCRIPTION_MODE_LABEL_TO_VALUE.get(
+                self.transcriptionModeCombo.currentText(),
+                "balanced",
+            ),
             translation_frequency=int(self.translationFrequencySpin.value()),
         )
 
     def _set_combo_value(self, combo: ComboBox, value: str) -> None:
-        index = combo.findData(value)
+        if combo is self.transcriptionModeCombo:
+            label = TRANSCRIPTION_MODE_VALUE_TO_LABEL.get(value, TRANSCRIPTION_MODE_OPTIONS[1][0])
+        else:
+            label = LANGUAGE_CODE_TO_LABEL.get(value, LANGUAGE_OPTIONS[0][0])
+        index = combo.findText(label)
         combo.setCurrentIndex(index if index >= 0 else 0)
 
     def _toggle_settings(self) -> None:
@@ -438,7 +480,7 @@ class FloatingSubtitleWindow(QWidget):
         self.currentSubtitleLabel.setText("正在建立会话，准备开始转写……")
         self.sessionMetaLabel.setText(runtime_options.describe())
 
-        self.worker = SessionWorker(runtime_options)
+        self.worker = SessionWorker(self.base_settings, runtime_options)
         self.worker.status_changed.connect(self._on_status_changed)
         self.worker.finished_paths.connect(self._on_finished_paths)
         self.worker.failed.connect(self._on_failed)
@@ -456,7 +498,8 @@ class FloatingSubtitleWindow(QWidget):
             return
         self._set_status("stopping")
         self._set_current_card_active(True)
-        self.sessionMetaLabel.setText("正在停止并等待最后一句完成转写和翻译。")
+        self.currentSubtitleLabel.setText("正在结束当前会话…")
+        self.sessionMetaLabel.setText("停止请求已发出，正在结束采集并收尾最后结果。")
         self.worker.request_stop()
         self.stopButton.setEnabled(False)
 
@@ -464,14 +507,19 @@ class FloatingSubtitleWindow(QWidget):
         self._set_status(status)
         summaries = {
             "starting": "正在初始化音频捕获和云端会话。",
+            "connecting": "音频和识别会话已就绪，正在进入实时听写。",
             "running": "正在听写中。",
             "stopping": "停止请求已发出，正在等待最后收尾。",
+            "finalizing": "正在等待最终转写结果返回。",
+            "saving": "正在整理翻译并导出字幕文件。",
             "completed": "本次会话完成，字幕文件已经导出。",
         }
         if status in summaries:
             self.sessionMetaLabel.setText(summaries[status])
         if status == "running":
             self.currentSubtitleLabel.setText("正在听写…")
+            self._set_current_card_active(True)
+        if status in {"starting", "connecting", "stopping", "finalizing", "saving"}:
             self._set_current_card_active(True)
         if status in {"completed", "failed", "idle"}:
             self._set_current_card_active(False)
@@ -538,6 +586,7 @@ class FloatingSubtitleWindow(QWidget):
         self.stopButton.setEnabled(running)
         self.primaryLanguageCombo.setEnabled(not running)
         self.secondaryLanguageCombo.setEnabled(not running and self.dualLanguageSwitch.isChecked())
+        self.transcriptionModeCombo.setEnabled(not running)
         self.translationFrequencySpin.setEnabled(not running)
         self.dualLanguageSwitch.setEnabled(not running)
         self.denoiseSwitch.setEnabled(not running)
@@ -560,7 +609,7 @@ class FloatingSubtitleWindow(QWidget):
         if path:
             target = Path(path).resolve().parent
         else:
-            target = load_settings().output_dir.resolve()
+            target = self.base_settings.output_dir.resolve()
         QDesktopServices.openUrl(QUrl.fromLocalFile(str(target)))
 
     def translationCache_clear(self) -> None:

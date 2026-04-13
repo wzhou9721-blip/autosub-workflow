@@ -675,7 +675,7 @@ class TranscribeInterface(QWidget):
                 return self._format_srt_time(sec or 0)
 
             def _write_srt(path, segs, mode):
-                with open(path, "w", encoding="utf-8") as f:
+                with open(path, "w", encoding="utf-8-sig") as f:
                     for i, seg in enumerate(segs):
                         s, e = _srt_time(seg.get("start", 0)), _srt_time(seg.get("end", 0))
                         orig = seg.get("optimized_text") or seg.get("text", "")

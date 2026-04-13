@@ -640,6 +640,66 @@ class LLMTranslator:
                 return True
 
         return False
+
+    @staticmethod
+    def _source_batch_ids(source_batch: List[Dict[str, Any]]) -> List[str]:
+        return [str(sub.get("index", i + 1)) for i, sub in enumerate(source_batch or [])]
+
+    @classmethod
+    def _normalize_translated_batch_to_source(
+        cls,
+        source_batch: List[Dict[str, Any]],
+        translated_batch: List[Dict[str, Any]] | None,
+    ) -> List[Dict[str, Any]]:
+        if not source_batch:
+            return translated_batch or []
+
+        source_ids = cls._source_batch_ids(source_batch)
+        source_id_set = set(source_ids)
+        translated_batch = translated_batch or []
+
+        matched: Dict[str, Dict[str, Any]] = {}
+        matched_count = 0
+        for item in translated_batch:
+            item_id = item.get("id")
+            key = str(item_id) if item_id is not None else ""
+            cn = str(item.get("cn", "") or "").strip()
+            if key in source_id_set and key not in matched:
+                matched[key] = {
+                    "id": int(key) if key.isdigit() else key,
+                    "cn": cn,
+                }
+                if cn:
+                    matched_count += 1
+
+        if matched_count == 0 and len(translated_batch) == len(source_batch):
+            print("[Translator] Returned ids do not match the source batch; remapping by batch order.")
+            remapped = []
+            for src_id, item in zip(source_ids, translated_batch):
+                remapped.append({
+                    "id": int(src_id) if src_id.isdigit() else src_id,
+                    "cn": str(item.get("cn", "") or "").strip(),
+                })
+            return remapped
+
+        if 0 < matched_count < len(source_batch):
+            print(
+                f"[Translator] Partial id match detected ({matched_count}/{len(source_batch)}); "
+                "keeping unmatched subtitles empty to avoid downstream misalignment."
+            )
+
+        normalized = []
+        for src_id in source_ids:
+            normalized.append(
+                matched.get(
+                    src_id,
+                    {
+                        "id": int(src_id) if src_id.isdigit() else src_id,
+                        "cn": "",
+                    },
+                )
+            )
+        return normalized
         
     def translate_batch(self, 
                        batch_subtitles: List[Dict[str, Any]], 
@@ -749,6 +809,7 @@ Video Context: {self.video_context}
             )
             
             translated_batch = self._parse_translated_batch(response_content, len(batch_subtitles))
+            translated_batch = self._normalize_translated_batch_to_source(batch_subtitles, translated_batch)
             # 若条数不足或存在空译文，触发宽松格式重试
             has_empty = any(not item.get("cn", "").strip() for item in (translated_batch or []))
             if not translated_batch or len(translated_batch) < len(batch_subtitles) or has_empty:
@@ -765,6 +826,7 @@ Video Context: {self.video_context}
                     task_scope=self._task_scope
                 )
                 translated_batch = self._parse_translated_batch(response_content, len(batch_subtitles))
+                translated_batch = self._normalize_translated_batch_to_source(batch_subtitles, translated_batch)
 
             # 最终兜底：若某条 cn 仍为空，用原文占位，避免字幕静默丢失
             for i, item in enumerate(translated_batch or []):
@@ -958,6 +1020,7 @@ No explanation, no markdown."""
                 task_scope=self._task_scope
             )
             reflected = self._parse_translated_batch(response_content, len(translated_batch))
+            reflected = self._normalize_translated_batch_to_source(source_batch, reflected)
 
             # 校验：条数必须匹配，且无空译文，否则保留原初稿
             if (reflected and

@@ -5,7 +5,7 @@ This project captures Windows system playback audio with WASAPI loopback, stream
 The defaults stay close to Gladia's conservative live examples:
 
 - `GLADIA_SOURCE_LANGUAGES=en` for English videos
-- `GLADIA_ENDPOINTING=0.05`
+- `TRANSCRIPTION_MODE=balanced`
 - `GLADIA_AUDIO_ENHANCER=false`
 - `GLADIA_SAMPLE_RATE=16000`
 
@@ -84,6 +84,12 @@ Set `GLADIA_SOURCE_LANGUAGES` to match the spoken audio. For example:
 - `en` for English commentary
 - `zh` for Chinese commentary
 - leave it empty only if you really want auto-detection
+
+You can also choose a transcription profile in `.env`:
+
+- `TRANSCRIPTION_MODE=fast`: lowest delay, weakest context
+- `TRANSCRIPTION_MODE=balanced`: more stable for normal spoken content
+- `TRANSCRIPTION_MODE=high_quality`: more context, higher delay
 
 You can also tune translation quality in `.env`:
 

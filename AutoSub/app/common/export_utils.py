@@ -226,7 +226,7 @@ def build_export_targets(
 
 
 def write_srt(path: str | Path, segments: list[dict], mode: str) -> None:
-    with open(path, "w", encoding="utf-8") as fh:
+    with open(path, "w", encoding="utf-8-sig") as fh:
         for i, seg in enumerate(segments):
             start = fmt_srt_time(seg.get("start", 0))
             raw_end = seg.get("end", 0)
