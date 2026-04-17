@@ -1224,6 +1224,7 @@ class TranslationInterface(QWidget):
         self._active_task_token = 0
         self.current_status_msg = ""
         self.current_source_path = None
+        self._suppress_auto_open_export_dir = False
         self._shutting_down = False
         self._stop_pending = False
 
@@ -1519,7 +1520,8 @@ class TranslationInterface(QWidget):
         self._phase_timings = phase_timings or {}
 
         # Store original path for export
-        self.current_source_path = original_file_path 
+        self.current_source_path = original_file_path
+        self._suppress_auto_open_export_dir = False
         
         for i, item in enumerate(subtitles):
             seg = {
@@ -1562,6 +1564,73 @@ class TranslationInterface(QWidget):
                 position=InfoBarPosition.BOTTOM_RIGHT,
                 duration=3000
             )
+
+    def begin_realtime_session(self, session_name: str, session_anchor_path: str | None = None):
+        """为实时捕获会话准备一条新的累计字幕轨。"""
+        self._on_stop_task()
+        self.current_subtitles = []
+        self._phase_timings = {}
+        self.current_source_path = session_anchor_path
+        self._suppress_auto_open_export_dir = True
+        self.import_card.filename_label.setText(f"{session_name}.wav")
+        self.import_card.path_label.setText(session_anchor_path or f"实时捕获会话: {session_name}")
+        self.import_card.start_btn.setEnabled(True)
+        self.import_card.fix_btn.setEnabled(True)
+        self.subtitle_list.set_data(self.current_subtitles)
+
+    def reset_realtime_session(self):
+        """清空实时捕获会话在翻译页的累计字幕与状态。"""
+        self._on_stop_task()
+        self.current_subtitles = []
+        self._phase_timings = {}
+        self.current_source_path = None
+        self._suppress_auto_open_export_dir = False
+        self.import_card.filename_label.setText("未选择文件")
+        self.import_card.path_label.setText("请点击按钮导入 SRT 字幕文件")
+        self.import_card.start_btn.setEnabled(False)
+        self.import_card.fix_btn.setEnabled(False)
+        self.subtitle_list.set_data(self.current_subtitles)
+
+    def append_processed_subtitles(
+        self,
+        subtitles: List[Dict[str, Any]],
+        session_name: str,
+        session_anchor_path: str | None = None,
+    ):
+        """追加一批已经处理完成的字幕到当前翻译轨道，并保持总时间轴连续。"""
+        if not subtitles:
+            return
+
+        if session_anchor_path:
+            self.current_source_path = session_anchor_path
+            self.import_card.path_label.setText(session_anchor_path)
+
+        self.import_card.filename_label.setText(f"{session_name}.wav")
+
+        for item in subtitles:
+            seg = {
+                "start": item.get("start", 0),
+                "end": item.get("end", 0),
+                "text": item.get("optimized_text", item.get("text", "")),
+                "translated_text": item.get("translated_text", ""),
+            }
+            if item.get("speaker") is not None:
+                seg["speaker"] = str(item["speaker"])
+            self.current_subtitles.append(seg)
+
+        self.current_subtitles.sort(key=lambda seg: (seg.get("start", 0), seg.get("end", 0)))
+        self._post_process_subtitles()
+        self.subtitle_list.set_data(self.current_subtitles)
+        self.import_card.start_btn.setEnabled(True)
+        self.import_card.fix_btn.setEnabled(True)
+
+        InfoBar.success(
+            title="实时片段已并入",
+            content=f"已累计 {len(self.current_subtitles)} 条字幕，可继续在本页检查与导出。",
+            parent=self,
+            position=InfoBarPosition.BOTTOM_RIGHT,
+            duration=2500
+        )
 
     def _on_file_imported(self, file_path):
         """ Handle imported SRT file """
@@ -2233,10 +2302,10 @@ class TranslationInterface(QWidget):
                 position=InfoBarPosition.BOTTOM_RIGHT,
                 duration=5000
             )
-            
-            # Open the folder
-            os.startfile(export_root)
-            
+
+            if not self._suppress_auto_open_export_dir:
+                os.startfile(export_root)
+             
         except Exception as e:
             InfoBar.error(
                 title="自动导出失败",

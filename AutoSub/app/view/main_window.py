@@ -6,6 +6,7 @@ from qfluentwidgets import FluentWindow, NavigationItemPosition, FluentIcon as F
 from app.view.home_interface import HomeInterface
 from app.view.setting_task_interface import SettingTaskInterface
 from app.view.setting_interface import SettingInterface
+from app.view.realtime_capture_interface import RealtimeCaptureInterface
 from app.view.transcribe_interface import TranscribeInterface
 from app.view.translation_interface import TranslationInterface
 
@@ -29,6 +30,9 @@ class MainWindow(FluentWindow):
         self.transcribeInterface = TranscribeInterface(self)
         # 3. 翻译+溢出修复 (Translate + Overflow Fix)
         self.translateInterface = TranslationInterface(self)
+        # 4. 实时捕获
+        self.realtimeInterface = RealtimeCaptureInterface(self.translateInterface, self.taskInterface, self)
+        self.realtimeInterface.open_translation_requested.connect(lambda: self.switchTo(self.translateInterface))
         
         # Settings Interface (Bottom)
         self.settingInterface = SettingInterface(self)
@@ -40,10 +44,13 @@ class MainWindow(FluentWindow):
         # 1. 设置任务 - 使用 EDIT 图标 (代表新建/编辑任务)
         self.addSubInterface(self.taskInterface, FIF.EDIT, '设置项目任务')
         
-        # 2. 转录+初始优化 - 使用 MICROPHONE 图标 (代表语音识别)
+        # 2. 实时捕获
+        self.addSubInterface(self.realtimeInterface, FIF.VIDEO, '实时捕获')
+
+        # 3. 转录+初始优化 - 使用 MICROPHONE 图标 (代表语音识别)
         self.addSubInterface(self.transcribeInterface, FIF.MICROPHONE, '转录+初始优化')
         
-        # 3. 翻译+溢出修复 - 使用 LANGUAGE 图标 (代表翻译)
+        # 4. 翻译+溢出修复 - 使用 LANGUAGE 图标 (代表翻译)
         self.addSubInterface(self.translateInterface, FIF.LANGUAGE, '翻译+溢出修复')
 
         # self.navigationInterface.addSeparator()  # 去掉导航分隔线
@@ -91,6 +98,10 @@ class MainWindow(FluentWindow):
             self.transcribeInterface._on_stop_task()
         except Exception:
             logging.exception("[MainWindow] 停止转录线程失败")
+        try:
+            self.realtimeInterface.stop_all()
+        except Exception:
+            logging.exception("[MainWindow] 停止实时捕获线程失败")
         # 停止翻译界面的线程
         try:
             self.translateInterface._on_stop_task()
@@ -112,6 +123,10 @@ class MainWindow(FluentWindow):
             return True
 
         all_stopped = True
+        all_stopped = _wait_thread(getattr(self.realtimeInterface, "capture_worker", None), "realtime.capture_worker") and all_stopped
+        all_stopped = _wait_thread(getattr(self.realtimeInterface, "transcription_thread", None), "realtime.transcription_thread") and all_stopped
+        all_stopped = _wait_thread(getattr(self.realtimeInterface, "translation_thread", None), "realtime.translation_thread") and all_stopped
+        all_stopped = _wait_thread(getattr(self.realtimeInterface, "fix_thread", None), "realtime.fix_thread") and all_stopped
         all_stopped = _wait_thread(getattr(self.transcribeInterface, "thread", None), "transcribe.thread") and all_stopped
         all_stopped = _wait_thread(getattr(self.transcribeInterface, "work_thread", None), "transcribe.work_thread") and all_stopped
         all_stopped = _wait_thread(getattr(self.translateInterface, "translation_thread", None), "translate.translation_thread") and all_stopped

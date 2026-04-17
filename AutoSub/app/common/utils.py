@@ -31,8 +31,28 @@ def extract_audio(video_path, audio_path=None):
     """
     从视频中提取音频 (WAV格式, 16kHz, 单声道)
     """
+    input_path = Path(video_path)
+
     if not audio_path:
-        audio_path = str(Path(video_path).with_suffix(".wav"))
+        if input_path.suffix.lower() == ".wav":
+            try:
+                with wave.open(str(input_path), "rb") as wf:
+                    if (
+                        wf.getframerate() == 16000
+                        and wf.getnchannels() == 1
+                        and wf.getsampwidth() == 2
+                    ):
+                        print(f"[Utils] 复用现成 WAV 音频: {input_path}")
+                        return str(input_path)
+            except Exception:
+                pass
+
+            audio_path = str(input_path.with_name(f"{input_path.stem}_extract.wav"))
+        else:
+            audio_path = str(input_path.with_suffix(".wav"))
+
+    if str(Path(audio_path).resolve()) == str(input_path.resolve()):
+        audio_path = str(input_path.with_name(f"{input_path.stem}_extract.wav"))
     
     ffmpeg_exe = get_ffmpeg_path()
     

@@ -849,10 +849,17 @@ class SettingTaskInterface(SmoothScrollArea):
         self.progressLabel.setText(label)
 
         summary_hint = ""
+        last_export_dir = ""
         if hasattr(self, 'batch_thread') and self.batch_thread:
             summary_path = getattr(self.batch_thread, 'batch_summary_path', '')
             if summary_path:
                 summary_hint = f"\n批量摘要：{os.path.basename(summary_path)}"
+            batch_reports = getattr(self.batch_thread, 'batch_reports', []) or []
+            for report in reversed(batch_reports):
+                export_path = report.get("export", "")
+                if report.get("status") == "success" and export_path:
+                    last_export_dir = os.path.dirname(export_path) or export_path
+                    break
 
         content = (
             f"成功处理 {success}/{total} 个文件，字幕已导出至各文件旁的「_导出」文件夹"
@@ -867,6 +874,12 @@ class SettingTaskInterface(SmoothScrollArea):
             position=InfoBarPosition.BOTTOM_RIGHT,
             duration=5000
         )
+
+        if last_export_dir and os.path.isdir(last_export_dir):
+            try:
+                os.startfile(last_export_dir)
+            except Exception:
+                logging.exception("[SettingTaskInterface] Failed to open final batch export dir: %s", last_export_dir)
 
     def _on_batch_error(self, msg):
         self.nextBtn.setEnabled(True)
