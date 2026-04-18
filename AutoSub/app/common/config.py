@@ -146,6 +146,7 @@ class Config(QConfig):
 
     # Gladia 转录调参
     gladia_vocabulary_intensity = ConfigItem("Gladia", "VocabularyIntensity", 0.6, restart=False)
+    gladia_local_denoise = ConfigItem("Gladia", "LocalDenoise", False, restart=False)
 
     # Gladia 说话人分离
     gladia_diarization = ConfigItem("Gladia", "Diarization", False, restart=False)

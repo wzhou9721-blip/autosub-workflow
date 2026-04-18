@@ -168,6 +168,16 @@ class SettingInterface(SmoothScrollArea):
         )
         self.asrGroup.addSettingCard(self.gladiaVocabIntensityCard)
 
+        # ── 本地预处理 ────────────────────────────────────────────────
+        self.gladiaLocalDenoiseCard = SwitchSettingCard(
+            FIF.MUTE,
+            "本地降噪后再上传",
+            "上传到 Gladia 前，先用 FFmpeg afftdn 对音频做一次本地降噪，适合噪声较重的素材。",
+            configItem=cfg.gladia_local_denoise,
+            parent=self.asrGroup
+        )
+        self.asrGroup.addSettingCard(self.gladiaLocalDenoiseCard)
+
         # ── 说话人分离 ────────────────────────────────────────────────
         self.gladiaDiarizationCard = SwitchSettingCard(
             FIF.PEOPLE,
@@ -757,6 +767,7 @@ class SettingInterface(SmoothScrollArea):
         self.gladiaKeyCard.setVisible(not is_whisper)
         self.gladiaTestCard.setVisible(not is_whisper)
         self.gladiaVocabIntensityCard.setVisible(not is_whisper)
+        self.gladiaLocalDenoiseCard.setVisible(not is_whisper)
         self.gladiaDiarizationCard.setVisible(not is_whisper)
         self.cloudAsrFallbackProviderCard.setEnabled(cfg.cloud_asr_fallback_enabled.value)
         self._syncCloudAsrFallbackProviderHint(value)

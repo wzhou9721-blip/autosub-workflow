@@ -11,7 +11,7 @@ import logging
 import requests
 from requests.exceptions import ConnectionError, Timeout, ReadTimeout
 from app.common.config import cfg
-from app.common.utils import fix_timestamp_overlaps
+from app.common.utils import apply_audio_preprocess, fix_timestamp_overlaps
 
 GLADIA_BASE_URL = "https://api.gladia.io"
 MAX_FILE_SIZE_MB = 500  # Gladia 单文件上传上限
@@ -53,6 +53,43 @@ class GladiaASR:
         """
         print(f"[GladiaASR] 开始转录: {audio_path}")
 
+        upload_audio_path, cleanup_audio_path = self._prepare_audio_for_upload(audio_path)
+        try:
+            return self._transcribe_prepared(
+                upload_audio_path,
+                language=language,
+                word_timestamps=word_timestamps,
+                context_prompt=context_prompt,
+                secondary_language=secondary_language,
+                cancel_check=cancel_check,
+            )
+        finally:
+            if cleanup_audio_path and os.path.exists(cleanup_audio_path):
+                try:
+                    os.remove(cleanup_audio_path)
+                except Exception as e:
+                    logging.warning(f"[GladiaASR] 删除预处理临时音频失败: {e}")
+
+    # ------------------------------------------------------------------
+    # 内部步骤
+    # ------------------------------------------------------------------
+
+    def _prepare_audio_for_upload(self, audio_path: str):
+        """根据设置对上传前音频做可选本地预处理。"""
+        if not cfg.gladia_local_denoise.value:
+            return audio_path, None
+
+        processed_path = apply_audio_preprocess(audio_path, gain_db=0.0, denoise=True)
+        if os.path.abspath(processed_path) == os.path.abspath(audio_path):
+            return audio_path, None
+
+        print(f"[GladiaASR] 已启用本地降噪预处理: {processed_path}")
+        return processed_path, processed_path
+
+    def _transcribe_prepared(self, audio_path: str, language: str = None,
+                             word_timestamps: bool = True, context_prompt: str = "",
+                             secondary_language: str = None, cancel_check=None) -> list:
+        """对已准备好的音频执行完整转录流程。"""
         if cancel_check:
             cancel_check()
 
@@ -80,10 +117,6 @@ class GladiaASR:
         segments = self._parse_result(result, word_timestamps)
         print(f"[GladiaASR] 转录完成，共 {len(segments)} 条片段。")
         return segments
-
-    # ------------------------------------------------------------------
-    # 内部步骤
-    # ------------------------------------------------------------------
 
     def _check_file_size(self, audio_path: str):
         """预检文件大小，超出限制时直接报错，避免浪费上传流量。"""
