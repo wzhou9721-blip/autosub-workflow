@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 from difflib import SequenceMatcher
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import re
 from app.common.config import cfg
 from app.common.runtime_state import OPTIMIZE_RESUME_FILE, load_json_file, save_json_atomic, safe_unlink
 from app.common.utils import fix_timestamp_overlaps
@@ -85,8 +86,12 @@ class SubtitleOptimizer:
             batch_idx, batch = batch_data
             subtitle_text = ""
             start_idx = batch_idx * batch_size
+            low_conf_ids = []
             for i, s in enumerate(batch):
-                subtitle_text += f"[{start_idx + i}] {s['text']}\n"
+                seg_id = start_idx + i
+                subtitle_text += f"[{seg_id}] {s['text']}\n"
+                if s.get("is_suspicious"):
+                    low_conf_ids.append(seg_id)
 
             # Build adjacent-batch context for cross-batch consistency
             adjacent_context = ""
@@ -118,11 +123,13 @@ Correct ASR errors (typos, punctuation) in the subtitles below.
 12. **NO CASE CHANGE**: Do NOT change capitalization of proper nouns or acronyms unless it is clearly a typo.
 13. **NO ADDITIONS**: Do NOT add words, explanations, or context that were not in the original.
 14. **NO PUNCTUATION ADDITION**: Do NOT add sentence-ending punctuation (. ! ?) to segments that have none. Each segment may be a mid-sentence fragment from a longer utterance — adding a period would create false sentence boundaries. Only CORRECT existing punctuation (e.g. fix a misplaced comma), never INSERT new terminal punctuation.
+15. **LOW-CONFIDENCE IDS**: For IDs listed in Low confidence IDs, be EXTRA conservative: keep the original wording, do not complete fragments, do not smooth syntax, do not infer missing words, and prefer leaving awkward text unchanged unless the typo is obvious.
 
 # Context
 - Video: {context if context else "None"}
 - Knowledge: {knowledge_context if knowledge_context else "None"}
 {adjacent_context}
+- Low confidence IDs: {low_conf_ids if low_conf_ids else "None"}
 # Subtitles
 {subtitle_text}
 """
@@ -189,10 +196,9 @@ Correct ASR errors (typos, punctuation) in the subtitles below.
                             if self._is_english(original) and self._contains_chinese(new_text):
                                 s['optimized_text'] = original
                             else:
-                                # Edit distance check: if LLM changed > 30%, likely hallucination
-                                ratio = SequenceMatcher(None, original, new_text).ratio()
-                                if ratio < 0.7:
-                                    print(f"[Optimizer] 编辑距离过大 (ratio={ratio:.2f})，回退原文: [{global_idx}]")
+                                if not self._is_safe_optimized_text(original, new_text, bool(s.get("is_suspicious"))):
+                                    ratio = SequenceMatcher(None, original, new_text).ratio()
+                                    print(f"[Optimizer] 改写过度 (ratio={ratio:.2f})，回退原文: [{global_idx}]")
                                     s['optimized_text'] = original
                                 else:
                                     s['optimized_text'] = new_text
@@ -242,6 +248,38 @@ Correct ASR errors (typos, punctuation) in the subtitles below.
             if '\u4e00' <= char <= '\u9fff':
                 return True
         return False
+
+    @staticmethod
+    def _tokenize_text(text):
+        return re.findall(r"[A-Za-z0-9']+|[\u3400-\u4dbf\u4e00-\u9fff]", (text or "").lower())
+
+    @staticmethod
+    def _strip_punctuation_only(text):
+        return re.sub(r"[^\w\u3400-\u4dbf\u4e00-\u9fff]+", "", (text or "").lower())
+
+    def _has_added_tokens(self, original, new_text):
+        original_tokens = set(self._tokenize_text(original))
+        new_tokens = self._tokenize_text(new_text)
+        return any(token not in original_tokens for token in new_tokens)
+
+    def _is_safe_optimized_text(self, original, new_text, suspicious: bool):
+        if not new_text.strip():
+            return False
+
+        ratio = SequenceMatcher(None, original, new_text).ratio()
+        if not suspicious:
+            return ratio >= 0.7
+
+        if self._strip_punctuation_only(original) == self._strip_punctuation_only(new_text):
+            return True
+
+        if self._has_added_tokens(original, new_text):
+            return False
+
+        if len(new_text.strip()) > len(original.strip()) + 6:
+            return False
+
+        return ratio >= 0.84
 
 # 单例
 subtitle_optimizer = SubtitleOptimizer()

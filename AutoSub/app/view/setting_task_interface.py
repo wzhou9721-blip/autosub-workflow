@@ -26,7 +26,7 @@ from app.common.config import cfg
 from app.common.runtime_state import BATCH_SESSION_STATE_FILE, load_json_file, save_json_atomic, safe_unlink
 
 from app.components.file_drop_widget import FileDropWidget
-from app.components.setting_cards import LineEditSettingCard, CalibrationPanel
+from app.components.setting_cards import LineEditSettingCard, CalibrationPanel, NumberSettingCard
 from app.common.thread import BatchTranscriptionThread
 
 _TARGET_LANGS = [lang for lang in cfg.LANGUAGE_LIST if lang != "Auto"]
@@ -310,6 +310,24 @@ class SettingTaskInterface(SmoothScrollArea):
         )
         self.secondaryLangCard.comboBox.setMaxVisibleItems(5)
 
+        self.localGapThresholdCard = NumberSettingCard(
+            cfg.multilingual_gap_threshold_sec,
+            FIF.STOP_WATCH,
+            "本地空白区间补录阈值 (s)",
+            "本地 Faster-Whisper 转录时，检测到未转录空白区间达到该时长时自动启动二次补录。",
+            self.scrollWidget,
+            range=(3, 60)
+        )
+
+        self.cloudGapThresholdCard = NumberSettingCard(
+            cfg.cloud_multilingual_gap_threshold_sec,
+            FIF.CLOUD,
+            "云端空白区间补录阈值 (s)",
+            "云端转录时，检测到未转录空白区间达到该时长时自动触发云端二次转录。",
+            self.scrollWidget,
+            range=(3, 60)
+        )
+
         # Target Language
         self.targetLangCard = ComboBoxSettingCard(
             cfg.targetLanguage,
@@ -355,6 +373,8 @@ class SettingTaskInterface(SmoothScrollArea):
         self.settingGroup.addSettingCard(self.modelCard)
         self.settingGroup.addSettingCard(self.langCard)
         self.settingGroup.addSettingCard(self.gapFillCard)
+        self.settingGroup.addSettingCard(self.localGapThresholdCard)
+        self.settingGroup.addSettingCard(self.cloudGapThresholdCard)
         self.settingGroup.addSettingCard(self.multilingualCard)
         self.settingGroup.addSettingCard(self.secondaryLangCard)
         self.settingGroup.addSettingCard(self.targetLangCard)
@@ -409,6 +429,7 @@ class SettingTaskInterface(SmoothScrollArea):
         cfg.asr_provider.valueChanged.connect(
             lambda _: self.onTranscribeModeChanged(cfg.transcribeMode.value)
         )
+        cfg.gap_fill_enabled.valueChanged.connect(self._updateGapFillThresholdVisibility)
         cfg.gap_fill_enabled.valueChanged.connect(self._updateMultilingualAvailability)
         cfg.workflow_translate.valueChanged.connect(self.onTranslateWorkflowChanged)
         self.onTranslateWorkflowChanged(cfg.workflow_translate.value)
@@ -416,6 +437,7 @@ class SettingTaskInterface(SmoothScrollArea):
         # 多语言开关联动：控制次要语言卡的显示
         cfg.multilingualMode.valueChanged.connect(self._onMultilingualToggled)
         self._onMultilingualToggled(cfg.multilingualMode.value)
+        self._updateGapFillThresholdVisibility()
 
     def onTranscribeModeChanged(self, value):
         """根据转录模式显示/隐藏本地模型选择，并在云端模式下展示当前提供商。"""
@@ -426,6 +448,7 @@ class SettingTaskInterface(SmoothScrollArea):
             self.modelCard.setVisible(False)
             provider = cfg.asr_provider.value
             self.modeCard.setContent(f"当前云端提供商: {provider}（可在全局设置中切换）")
+        self._updateGapFillThresholdVisibility()
         self._updateMultilingualAvailability()
 
     def _onMultilingualToggled(self, enabled: bool):
@@ -457,6 +480,12 @@ class SettingTaskInterface(SmoothScrollArea):
             widget = self.fileListLayout.itemAt(i).widget()
             if isinstance(widget, FileItemWidget):
                 widget.setMultilingualAvailable(available, file_hint)
+
+    def _updateGapFillThresholdVisibility(self, *_):
+        gap_enabled = bool(cfg.gap_fill_enabled.value)
+        is_cloud_mode = cfg.transcribeMode.value == "云端"
+        self.localGapThresholdCard.setVisible(gap_enabled and not is_cloud_mode)
+        self.cloudGapThresholdCard.setVisible(gap_enabled and is_cloud_mode)
 
     def onTranslateWorkflowChanged(self, value):
         enable = bool(value)
@@ -653,6 +682,7 @@ class SettingTaskInterface(SmoothScrollArea):
             "gapFillEnabled": cfg.gap_fill_enabled.value,
             "multilingualMode": cfg.multilingualMode.value,
             "secondaryLanguage": cfg.secondaryLanguage.value if cfg.multilingualMode.value else None,
+            "multilingualGapThresholdSec": cfg.multilingual_gap_threshold_sec.value,
             "CloudMultilingualGapThresholdSec": cfg.cloud_multilingual_gap_threshold_sec.value,
         }
 

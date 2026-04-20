@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import os
+import re
 import time
 from app.common.cuda_setup import setup_cuda_paths
 
@@ -122,22 +123,319 @@ class Transcriber:
         """
         if not gaps:
             return []
-        gaps = sorted(gaps, key=lambda x: x[0])
+        def bounds(item):
+            if isinstance(item, dict):
+                return float(item.get("start", 0) or 0), float(item.get("end", 0) or 0)
+            return float(item[0]), float(item[1])
+
+        gaps = sorted(gaps, key=lambda x: bounds(x)[0])
         blocks = []
         current_gaps = [gaps[0]]
         for i in range(1, len(gaps)):
-            g_start, g_end = gaps[i]
-            block_start = current_gaps[0][0]
+            g_start, g_end = bounds(gaps[i])
+            block_start, _ = bounds(current_gaps[0])
             # 当前块若加入此 gap，跨度 = 本 gap 终点 - 当前块起点
             new_span = g_end - block_start
             if new_span <= max_block_span_sec:
-                current_gaps.append((g_start, g_end))
+                current_gaps.append(gaps[i])
             else:
-                blocks.append((current_gaps[0][0], current_gaps[-1][1], list(current_gaps)))
-                current_gaps = [(g_start, g_end)]
+                _, block_end = bounds(current_gaps[-1])
+                blocks.append((block_start, block_end, list(current_gaps)))
+                current_gaps = [gaps[i]]
         if current_gaps:
-            blocks.append((current_gaps[0][0], current_gaps[-1][1], list(current_gaps)))
+            block_start, _ = bounds(current_gaps[0])
+            _, block_end = bounds(current_gaps[-1])
+            blocks.append((block_start, block_end, list(current_gaps)))
         return blocks
+
+    @staticmethod
+    def _collapse_text(text):
+        return re.sub(r"\s+", " ", (text or "").strip())
+
+    @staticmethod
+    def _compact_text(text):
+        return re.sub(r"\s+", "", (text or "").strip())
+
+    @staticmethod
+    def _extract_word_tokens(text):
+        return re.findall(r"[A-Za-z0-9']+", (text or "").lower())
+
+    @staticmethod
+    def _extract_cjk_tokens(text):
+        return re.findall(r"[\u3400-\u4dbf\u4e00-\u9fff]", text or "")
+
+    @classmethod
+    def _text_signal_length(cls, text):
+        compact = cls._compact_text(text)
+        if not compact:
+            return 0
+        words = cls._extract_word_tokens(compact)
+        if words:
+            return len(words)
+        cjk = cls._extract_cjk_tokens(compact)
+        if cjk:
+            return len(cjk)
+        return len(compact)
+
+    @staticmethod
+    def _is_weak_boundary_start(text):
+        stripped = re.sub(r'^[\s"\'“”‘’\(\)\[\]{}<>.,!?;:，。！？；：、…-]+', '', (text or '').strip()).lower()
+        if not stripped:
+            return False
+        weak_tokens = {
+            "and", "but", "or", "because", "if", "when", "while", "that", "to",
+            "of", "for", "with", "from", "than", "then", "so", "as", "the",
+        }
+        if any(stripped.startswith(token + " ") or stripped == token for token in weak_tokens):
+            return True
+        return any(stripped.startswith(token) for token in ("的", "了", "呢", "吗", "把", "被", "和", "与"))
+
+    @staticmethod
+    def _is_weak_boundary_end(text):
+        stripped = re.sub(r'[\s"\'“”‘’\(\)\[\]{}<>.,!?;:，。！？；：、…-]+$', '', (text or '').strip()).lower()
+        if not stripped:
+            return False
+        weak_tokens = {
+            "and", "but", "or", "because", "if", "when", "while", "that", "to",
+            "of", "for", "with", "from", "than", "so", "as", "the", "a", "an",
+        }
+        match = re.search(r"([A-Za-z']+)$", stripped)
+        if match and match.group(1) in weak_tokens:
+            return True
+        return any(stripped.endswith(token) for token in ("的", "了", "呢", "吗", "在", "把", "被", "和", "与"))
+
+    @classmethod
+    def _segment_quality_signature(cls, seg):
+        return (
+            round(float(seg.get("start", 0) or 0), 3),
+            round(float(seg.get("end", 0) or 0), 3),
+            cls._collapse_text(seg.get("text", "")),
+        )
+
+    def _annotate_segment_quality(self, results):
+        """为 segment 打上运行时质量元数据，不直接修改文本内容。"""
+        if not results:
+            return results
+
+        for i, seg in enumerate(results):
+            text = self._collapse_text(seg.get("text", ""))
+            seg["text"] = text
+            flags = []
+            penalty = 0.0
+            duration = max(0.0, float(seg.get("end", 0) or 0) - float(seg.get("start", 0) or 0))
+            signal_len = self._text_signal_length(text)
+            prev_seg = results[i - 1] if i > 0 else None
+            next_seg = results[i + 1] if i + 1 < len(results) else None
+
+            if text:
+                if (
+                    0 < i < len(results) - 1
+                    and duration < 0.45
+                    and signal_len <= 2
+                    and max(
+                        float(prev_seg.get("end", 0) or 0) - float(prev_seg.get("start", 0) or 0),
+                        float(next_seg.get("end", 0) or 0) - float(next_seg.get("start", 0) or 0),
+                    ) >= 0.8
+                ):
+                    flags.append("short_island")
+                    penalty += 0.28
+
+                if duration > 0:
+                    words = len(self._extract_word_tokens(text))
+                    cjk_chars = len(self._extract_cjk_tokens(text))
+                    if words and words / max(duration, 0.1) > 5.4:
+                        flags.append("dense_text")
+                        penalty += 0.22
+                    elif cjk_chars and cjk_chars / max(duration, 0.1) > 12.0:
+                        flags.append("dense_text")
+                        penalty += 0.22
+                    elif signal_len <= 2 and duration > 2.2:
+                        flags.append("sparse_long")
+                        penalty += 0.2
+
+                word_tokens = self._extract_word_tokens(text)
+                if len(word_tokens) >= 2:
+                    repeated = sum(
+                        1 for left, right in zip(word_tokens, word_tokens[1:]) if left == right
+                    )
+                    if repeated >= 1:
+                        flags.append("repeated_tokens")
+                        penalty += 0.18
+
+                if self._is_weak_boundary_start(text) or self._is_weak_boundary_end(text):
+                    flags.append("fragmentary_boundary")
+                    penalty += 0.18
+
+                if prev_seg and next_seg:
+                    prev_gap = max(0.0, float(seg.get("start", 0) or 0) - float(prev_seg.get("end", 0) or 0))
+                    next_gap = max(0.0, float(next_seg.get("start", 0) or 0) - float(seg.get("end", 0) or 0))
+                    if signal_len <= 3 and prev_gap < 0.2 and next_gap < 0.2:
+                        flags.append("embedded_fragment")
+                        penalty += 0.18
+
+                nsp = seg.get("_no_speech_prob")
+                if nsp is not None:
+                    try:
+                        nsp = float(nsp)
+                        if nsp > 0.9:
+                            flags.append("high_no_speech_prob")
+                            penalty += 0.32
+                        elif nsp > 0.75:
+                            flags.append("elevated_no_speech_prob")
+                            penalty += 0.18
+                    except Exception:
+                        pass
+
+                alp = seg.get("_avg_logprob")
+                if alp is not None:
+                    try:
+                        alp = float(alp)
+                        if alp < -1.8:
+                            flags.append("very_low_logprob")
+                            penalty += 0.32
+                        elif alp < -1.3:
+                            flags.append("low_logprob")
+                            penalty += 0.18
+                    except Exception:
+                        pass
+
+            score = max(0.0, 1.0 - min(penalty, 0.92))
+            is_suspicious = score < 0.62 or len(flags) >= 2 or any(
+                flag in flags for flag in ("very_low_logprob", "high_no_speech_prob", "dense_text")
+            )
+
+            seg["quality_score"] = round(score, 3)
+            seg["quality_flags"] = flags
+            seg["is_suspicious"] = bool(is_suspicious)
+
+        return results
+
+    def _build_refill_candidates(self, results, audio_duration, gap_threshold):
+        """同时收集传统大空白和可疑小区域两类补录候选。"""
+        candidates = []
+        intervals = []
+        for seg in results:
+            s = float(seg.get("start", 0) or 0)
+            e = float(seg.get("end", 0) or 0)
+            if e > s:
+                intervals.append((s, e))
+        intervals.sort(key=lambda x: x[0])
+
+        merged_intervals = []
+        for s, e in intervals:
+            if not merged_intervals or s > merged_intervals[-1][1]:
+                merged_intervals.append([s, e])
+            else:
+                merged_intervals[-1][1] = max(merged_intervals[-1][1], e)
+
+        coverage_end = audio_duration if (audio_duration and audio_duration > 0) else (merged_intervals[-1][1] if merged_intervals else 0)
+        if merged_intervals:
+            if merged_intervals[0][0] >= gap_threshold:
+                candidates.append({"start": 0.0, "end": merged_intervals[0][0], "kind": "gap"})
+            for i in range(1, len(merged_intervals)):
+                gap_start = merged_intervals[i - 1][1]
+                gap_end = merged_intervals[i][0]
+                if gap_end - gap_start >= gap_threshold:
+                    candidates.append({"start": gap_start, "end": gap_end, "kind": "gap"})
+            tail_gap = coverage_end - merged_intervals[-1][1]
+            if tail_gap >= gap_threshold:
+                candidates.append({"start": merged_intervals[-1][1], "end": coverage_end, "kind": "gap"})
+        elif coverage_end >= gap_threshold:
+            candidates.append({"start": 0.0, "end": coverage_end, "kind": "gap"})
+
+        suspicious_runs = []
+        run_start = None
+        for i, seg in enumerate(results):
+            if seg.get("is_suspicious"):
+                if run_start is None:
+                    run_start = i
+            elif run_start is not None:
+                suspicious_runs.append((run_start, i - 1))
+                run_start = None
+        if run_start is not None:
+            suspicious_runs.append((run_start, len(results) - 1))
+
+        for start_idx, end_idx in suspicious_runs:
+            run_len = end_idx - start_idx + 1
+            if run_len > 3 or start_idx == 0 or end_idx >= len(results) - 1:
+                continue
+            prev_seg = results[start_idx - 1]
+            next_seg = results[end_idx + 1]
+            if prev_seg.get("is_suspicious") or next_seg.get("is_suspicious"):
+                continue
+            group_start = float(results[start_idx].get("start", 0) or 0)
+            group_end = float(results[end_idx].get("end", 0) or 0)
+            win_start = max(float(prev_seg.get("end", 0) or 0), max(0.0, group_start - 0.6))
+            win_end = min(float(next_seg.get("start", 0) or 0), group_end + 0.6)
+            if win_end - win_start < 0.6:
+                continue
+            candidates.append({
+                "start": win_start,
+                "end": win_end,
+                "kind": "suspicious",
+                "targets": results[start_idx:end_idx + 1],
+            })
+
+        deduped = []
+        seen = set()
+        for candidate in candidates:
+            key = (
+                round(float(candidate["start"]), 3),
+                round(float(candidate["end"]), 3),
+                candidate.get("kind", "gap"),
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(candidate)
+        return deduped
+
+    @staticmethod
+    def _candidate_bounds(candidate):
+        if isinstance(candidate, dict):
+            return float(candidate.get("start", 0) or 0), float(candidate.get("end", 0) or 0)
+        return float(candidate[0]), float(candidate[1])
+
+    def _candidate_overlap(self, seg_start, seg_end, candidate):
+        cand_start, cand_end = self._candidate_bounds(candidate)
+        return min(seg_end, cand_end) > max(seg_start, cand_start)
+
+    def _window_repair_score(self, segments):
+        if not segments:
+            return 0.0
+        annotated = self._annotate_segment_quality([dict(seg) for seg in segments])
+        avg_quality = sum(float(seg.get("quality_score", 0.0) or 0.0) for seg in annotated) / len(annotated)
+        total_signal = sum(self._text_signal_length(seg.get("text", "")) for seg in annotated)
+        suspicious_count = sum(1 for seg in annotated if seg.get("is_suspicious"))
+        return avg_quality + min(total_signal, 24) / 120.0 - suspicious_count * 0.08
+
+    def _should_replace_refill_window(self, original_segments, new_segments):
+        if not original_segments or not new_segments:
+            return False
+        original_signal = sum(self._text_signal_length(seg.get("text", "")) for seg in original_segments)
+        new_signal = sum(self._text_signal_length(seg.get("text", "")) for seg in new_segments)
+        if new_signal < max(1, int(original_signal * 0.7)):
+            return False
+
+        original_score = self._window_repair_score(original_segments)
+        new_score = self._window_repair_score(new_segments)
+        return new_score > original_score + 0.12
+
+    def _finalize_refill_results(self, results, added_segments, replacement_segments, replaced_targets):
+        kept = [
+            seg for seg in results
+            if id(seg) not in replaced_targets and self._collapse_text(seg.get("text", ""))
+        ]
+        combined = kept + list(added_segments) + list(replacement_segments)
+        deduped = []
+        seen = set()
+        for seg in sorted(combined, key=lambda item: (float(item.get("start", 0) or 0), float(item.get("end", 0) or 0))):
+            key = self._segment_quality_signature(seg)
+            if key in seen:
+                continue
+            seen.add(key)
+            deduped.append(seg)
+        return deduped
 
     def run(self, video_path, config, force_cpu=False, cancel_check=None):
         """ 
@@ -229,6 +527,7 @@ class Transcriber:
                 if cancel_check:
                     cancel_check()
                 results = _run_cloud_asr(provider, _cancel_check=cancel_check)
+                results = self._annotate_segment_quality(results)
                 # ── 云端模式下也复用本地的空白区间补录逻辑 ──
                 gap_fill_enabled = bool(config.get("gapFillEnabled", cfg.gap_fill_enabled.value))
                 multilingual_enabled = bool(config.get("multilingualMode"))
@@ -259,6 +558,7 @@ class Transcriber:
                         glossary_text=glossary_text,
                     )
                     results = fix_timestamp_overlaps(results)
+                    results = self._annotate_segment_quality(results)
 
                 return results
             except Exception as primary_error:
@@ -277,6 +577,7 @@ class Transcriber:
                     if cancel_check:
                         cancel_check()
                     results = _run_cloud_asr(candidate, _cancel_check=cancel_check)
+                    results = self._annotate_segment_quality(results)
                     gap_fill_enabled = bool(config.get("gapFillEnabled", cfg.gap_fill_enabled.value))
                     multilingual_enabled = bool(config.get("multilingualMode"))
                     if gap_fill_enabled and results and (whisper_lang or multilingual_enabled):
@@ -305,6 +606,7 @@ class Transcriber:
                             glossary_text=glossary_text,
                         )
                         results = fix_timestamp_overlaps(results)
+                        results = self._annotate_segment_quality(results)
 
                     return results
                 except Exception as fallback_error:
@@ -451,7 +753,9 @@ class Transcriber:
                 res = {
                     "start": segment.start,
                     "end": segment.end,
-                    "text": text
+                    "text": text,
+                    "_avg_logprob": avg_logprob,
+                    "_no_speech_prob": no_speech_prob,
                 }
                 
                 # 如果开启了词级时间戳，保存词级信息
@@ -517,6 +821,7 @@ class Transcriber:
                 cancel_check=cancel_check
             )
             results = fix_timestamp_overlaps(results)
+            results = self._annotate_segment_quality(results)
 
         print(f"[Transcriber] 转录完成，共 {len(results)} 条片段。")
         return results
@@ -541,42 +846,9 @@ class Transcriber:
         import subprocess
         from app.common.utils import get_ffmpeg_path
 
-        # ── 1. 先统计整段音频时长，并按已识别区间求补集（覆盖首尾空白） ─────────────
+        # ── 1. 统计大空白 + 可疑小区域，作为统一补录候选 ─────────────────────
         audio_duration = self._get_audio_duration(audio_path)
-        intervals = []
-        for seg in results:
-            s = float(seg.get("start", 0) or 0)
-            e = float(seg.get("end", 0) or 0)
-            if e > s:
-                intervals.append((s, e))
-        intervals.sort(key=lambda x: x[0])
-
-        merged_intervals = []
-        for s, e in intervals:
-            if not merged_intervals or s > merged_intervals[-1][1]:
-                merged_intervals.append([s, e])
-            else:
-                merged_intervals[-1][1] = max(merged_intervals[-1][1], e)
-
-        gaps = []
-        coverage_end = audio_duration if (audio_duration and audio_duration > 0) else (merged_intervals[-1][1] if merged_intervals else 0)
-        if merged_intervals:
-            # 头部空白
-            if merged_intervals[0][0] >= gap_threshold:
-                gaps.append((0.0, merged_intervals[0][0]))
-            # 中间空白
-            for i in range(1, len(merged_intervals)):
-                gap_start = merged_intervals[i - 1][1]
-                gap_end = merged_intervals[i][0]
-                if gap_end - gap_start >= gap_threshold:
-                    gaps.append((gap_start, gap_end))
-            # 尾部空白
-            tail_gap = coverage_end - merged_intervals[-1][1]
-            if tail_gap >= gap_threshold:
-                gaps.append((merged_intervals[-1][1], coverage_end))
-        elif coverage_end >= gap_threshold:
-            # 极端情况：无任何识别结果，整段作为空白候选
-            gaps.append((0.0, coverage_end))
+        refill_candidates = self._build_refill_candidates(results, audio_duration, gap_threshold)
 
         # ── 2. 异常长段检测 ──────────────────────────────────────────────
         anomalous_segs = []   # 记录异常段，填补后修正其起点
@@ -606,10 +878,8 @@ class Transcriber:
                 #   窗口B: seg_start → true_start_est（段内部的隐藏内容）
                 added = False
                 if seg_start - prev_end >= 3.0:
-                    gaps.append((prev_end, seg_start))
                     added = True
                 if true_start_est - seg_start >= 3.0:
-                    gaps.append((seg_start, true_start_est))
                     added = True
 
                 if added:
@@ -620,29 +890,44 @@ class Transcriber:
                         "window_start": prev_end,
                         "window_end":   true_start_est,
                     })
+                    if seg_start - prev_end >= 3.0:
+                        refill_candidates.append({"start": prev_end, "end": seg_start, "kind": "gap"})
+                    if true_start_est - seg_start >= 3.0:
+                        refill_candidates.append({"start": seg_start, "end": true_start_est, "kind": "gap"})
                     print(f"[Transcriber] 检测到异常长段 [{seg_start:.1f}s-{seg_end:.1f}s] "
                           f"'{text[:30]}' (预期{expected_dur:.1f}s/实际{actual_dur:.1f}s)，"
                           f"疑似隐藏内容: {prev_end:.1f}s-{true_start_est:.1f}s（拆为两窗口）")
 
-        # 去重、排序，过滤相互重叠的区间
-        gaps = sorted(set(gaps), key=lambda x: x[0])
-        merged_gaps: list = []
-        for g in gaps:
-            if merged_gaps and g[0] < merged_gaps[-1][1]:
-                merged_gaps[-1] = (merged_gaps[-1][0], max(merged_gaps[-1][1], g[1]))
-            else:
-                merged_gaps.append(list(g))
-        gaps = [tuple(g) for g in merged_gaps]
-
-        if not gaps:
+        if not refill_candidates:
             return results
 
+        deduped_candidates = []
+        seen_candidates = set()
+        for candidate in refill_candidates:
+            key = (
+                round(float(candidate.get("start", 0) or 0), 3),
+                round(float(candidate.get("end", 0) or 0), 3),
+                candidate.get("kind", "gap"),
+            )
+            if key in seen_candidates:
+                continue
+            seen_candidates.add(key)
+            deduped_candidates.append(candidate)
+        refill_candidates = deduped_candidates
+
         # 合并全部空白为尽量少的块（仅限制单块跨度上限），每块一次截取 + 一次 ASR
-        blocks = self._merge_gaps_into_blocks(gaps, max_block_span_sec=300.0)
-        print(f"[Transcriber] 发现 {len(gaps)} 个需补录区间（含异常长段），合并为 {len(blocks)} 块，启动空白区间补录...")
+        blocks = self._merge_gaps_into_blocks(refill_candidates, max_block_span_sec=300.0)
+        gap_count = sum(1 for c in refill_candidates if c.get("kind") == "gap")
+        suspicious_count = sum(1 for c in refill_candidates if c.get("kind") == "suspicious")
+        print(
+            f"[Transcriber] 发现 {gap_count} 个大空白、{suspicious_count} 个可疑区域，"
+            f"合并为 {len(blocks)} 块，启动空白区间补录..."
+        )
 
         ffmpeg_exe  = get_ffmpeg_path()
-        new_segments = []
+        added_segments = []
+        replacement_segments = []
+        replaced_targets = set()
         pad = 0.3
 
         fill_kwargs = dict(base_kwargs)
@@ -688,10 +973,11 @@ class Transcriber:
                 if not seg_list:
                     continue
 
-                print(f"[Transcriber] 填补块 {block_start:.1f}s-{block_end:.1f}s（含 {len(gaps_in_block)} 个空白），"
+                print(f"[Transcriber] 填补块 {block_start:.1f}s-{block_end:.1f}s（含 {len(gaps_in_block)} 个候选区），"
                       f"检测语言: {detected_lang}，共 {len(seg_list)} 段")
 
                 offset = t_start
+                block_new_segments = []
                 for seg in seg_list:
                     text = seg.text.strip()
                     if not text or len(text) < 1:
@@ -714,14 +1000,16 @@ class Transcriber:
                     seg_start = offset + seg.start
                     seg_end   = offset + seg.end
 
-                    # 只保留与当前块内任一原始空白有交集的片段
-                    if not any(min(seg_end, g_end) > max(seg_start, g_start) for g_start, g_end in gaps_in_block):
+                    # 只保留与当前块内任一候选区有交集的片段
+                    if not any(self._candidate_overlap(seg_start, seg_end, candidate) for candidate in gaps_in_block):
                         continue
 
                     new_seg = {
                         "start": round(seg_start, 3),
                         "end":   round(seg_end,   3),
                         "text":  text,
+                        "_avg_logprob": alp,
+                        "_no_speech_prob": nsp,
                     }
                     if word_timestamps and hasattr(seg, "words") and seg.words:
                         new_seg["words"] = [
@@ -736,8 +1024,27 @@ class Transcriber:
                             new_seg["start"] = new_seg["words"][0]["start"]
                             new_seg["end"]   = new_seg["words"][-1]["end"]
 
-                    new_segments.append(new_seg)
+                    block_new_segments.append(new_seg)
                     print(f"[Transcriber] 填补: [{new_seg['start']:.2f}s -> {new_seg['end']:.2f}s] {text}")
+
+                if block_new_segments:
+                    self._annotate_segment_quality(block_new_segments)
+                for candidate in gaps_in_block:
+                    candidate_overlap = [
+                        seg for seg in block_new_segments
+                        if self._candidate_overlap(seg.get("start", 0), seg.get("end", 0), candidate)
+                    ]
+                    if not candidate_overlap:
+                        continue
+                    if candidate.get("kind") == "suspicious":
+                        originals = candidate.get("targets") or []
+                        if self._should_replace_refill_window(originals, candidate_overlap):
+                            replaced_targets.update(id(seg) for seg in originals)
+                            replacement_segments.extend(candidate_overlap)
+                            cand_start, cand_end = self._candidate_bounds(candidate)
+                            print(f"[Transcriber] 可疑区域补录采用新结果: {cand_start:.2f}s-{cand_end:.2f}s")
+                    else:
+                        added_segments.extend(candidate_overlap)
 
             except Exception as e:
                 print(f"[Transcriber] 填补块 {block_start:.1f}s-{block_end:.1f}s 出错: {e}")
@@ -747,10 +1054,12 @@ class Transcriber:
                 except Exception:
                     pass
 
-        if new_segments:
-            results = results + new_segments
-            results.sort(key=lambda x: x.get("start", 0))
-            print(f"[Transcriber] 空白区间补录完成，新增 {len(new_segments)} 条片段")
+        if added_segments or replacement_segments:
+            results = self._finalize_refill_results(results, added_segments, replacement_segments, replaced_targets)
+            print(
+                f"[Transcriber] 空白区间补录完成，新增 {len(added_segments)} 条片段，"
+                f"替换 {len(replaced_targets)} 条可疑片段"
+            )
 
             # 修正异常段起点：把异常段的 start 推到填补内容结束之后，
             # 防止 fix_timestamp_overlaps 把它压缩成毫秒级碎片。
@@ -759,7 +1068,7 @@ class Transcriber:
                 window_start = anom["window_start"]
                 window_end   = anom["window_end"]
                 last_fill_end = window_start
-                for ns in new_segments:
+                for ns in added_segments + replacement_segments:
                     ns_start = ns.get("start", 0)
                     ns_end   = ns.get("end",   0)
                     if ns_start >= window_start and ns_end <= window_end + 2.0:
@@ -805,6 +1114,8 @@ class Transcriber:
             # 清除被标记为空的幻觉段
             results = [seg for seg in results if seg.get("text", "").strip()]
 
+        results = self._annotate_segment_quality(results)
+
         return results
 
     def _fill_gaps_multilingual_cloud(self, results, audio_path,
@@ -828,57 +1139,32 @@ class Transcriber:
         if not results:
             return results
 
-        # ── 1. 检测需填补的空白区间（与本地版本保持一致的策略） ─────────────
+        # ── 1. 检测需填补的大空白与可疑区域 ───────────────────────────────
         audio_duration = self._get_audio_duration(audio_path)
-        intervals = []
-        for seg in results:
-            s = float(seg.get("start", 0) or 0)
-            e = float(seg.get("end", 0) or 0)
-            if e > s:
-                intervals.append((s, e))
-        intervals.sort(key=lambda x: x[0])
+        refill_candidates = self._build_refill_candidates(results, audio_duration, gap_threshold)
 
-        merged_intervals = []
-        for s, e in intervals:
-            if not merged_intervals or s > merged_intervals[-1][1]:
-                merged_intervals.append([s, e])
-            else:
-                merged_intervals[-1][1] = max(merged_intervals[-1][1], e)
-
-        gaps = []
-        coverage_end = audio_duration if (audio_duration and audio_duration > 0) else (merged_intervals[-1][1] if merged_intervals else 0)
-        if merged_intervals:
-            # 头部空白
-            if merged_intervals[0][0] >= gap_threshold:
-                gaps.append((0.0, merged_intervals[0][0]))
-            # 中间空白
-            for i in range(1, len(merged_intervals)):
-                gap_start = merged_intervals[i - 1][1]
-                gap_end = merged_intervals[i][0]
-                if gap_end - gap_start >= gap_threshold:
-                    gaps.append((gap_start, gap_end))
-            # 尾部空白
-            tail_gap = coverage_end - merged_intervals[-1][1]
-            if tail_gap >= gap_threshold:
-                gaps.append((merged_intervals[-1][1], coverage_end))
-        elif coverage_end >= gap_threshold:
-            gaps.append((0.0, coverage_end))
-
-        if not gaps:
+        if not refill_candidates:
             return results
 
         # 合并全部空白为尽量少的块（仅限制单块跨度上限），每块一次截取 + 一次 ASR
-        blocks = self._merge_gaps_into_blocks(gaps, max_block_span_sec=300.0)
+        blocks = self._merge_gaps_into_blocks(refill_candidates, max_block_span_sec=300.0)
         # 云端单次补录最多处理块数，避免极端情况
         max_blocks = 10
         if len(blocks) > max_blocks:
             print(f"[Transcriber] (云端) 合并后 {len(blocks)} 块，仅处理前 {max_blocks} 块")
             blocks = blocks[:max_blocks]
 
-        print(f"[Transcriber] (云端) 发现 {len(gaps)} 个空白区间，合并为 {len(blocks)} 块，启动空白区间补录...")
+        gap_count = sum(1 for c in refill_candidates if c.get("kind") == "gap")
+        suspicious_count = sum(1 for c in refill_candidates if c.get("kind") == "suspicious")
+        print(
+            f"[Transcriber] (云端) 发现 {gap_count} 个大空白、{suspicious_count} 个可疑区域，"
+            f"合并为 {len(blocks)} 块，启动空白区间补录..."
+        )
 
         ffmpeg_exe = get_ffmpeg_path()
-        new_segments: list[dict] = []
+        added_segments: list[dict] = []
+        replacement_segments: list[dict] = []
+        replaced_targets = set()
         pad = 0.3
         lang_desc = fill_language if fill_language else "自动检测"
         print(f"[Transcriber] (云端) 填补语言: {lang_desc}，提供商: {provider}")
@@ -952,8 +1238,9 @@ class Transcriber:
                 if not block_results:
                     continue
 
-                print(f"[Transcriber] (云端) 填补块 {block_start:.1f}s-{block_end:.1f}s（含 {len(gaps_in_block)} 个空白），返回 {len(block_results)} 段")
+                print(f"[Transcriber] (云端) 填补块 {block_start:.1f}s-{block_end:.1f}s（含 {len(gaps_in_block)} 个候选区），返回 {len(block_results)} 段")
 
+                block_new_segments = []
                 for seg in block_results:
                     text = (seg.get("text") or "").strip()
                     if not text:
@@ -966,14 +1253,16 @@ class Transcriber:
                     seg_start = offset + float(seg.get("start", 0) or 0)
                     seg_end = offset + float(seg.get("end", 0) or 0)
 
-                    # 只保留与当前块内任一原始空白有交集的片段，避免重复已覆盖区间
-                    if not any(min(seg_end, g_end) > max(seg_start, g_start) for g_start, g_end in gaps_in_block):
+                    # 只保留与当前块内任一候选区有交集的片段，避免重复已覆盖区间
+                    if not any(self._candidate_overlap(seg_start, seg_end, candidate) for candidate in gaps_in_block):
                         continue
 
                     new_seg = {
                         "start": round(seg_start, 3),
                         "end": round(seg_end, 3),
                         "text": text,
+                        "_avg_logprob": seg.get("_avg_logprob"),
+                        "_no_speech_prob": seg.get("_no_speech_prob"),
                     }
 
                     if word_timestamps and seg.get("words"):
@@ -992,8 +1281,27 @@ class Transcriber:
                             new_seg["start"] = words[0]["start"]
                             new_seg["end"] = words[-1]["end"]
 
-                    new_segments.append(new_seg)
+                    block_new_segments.append(new_seg)
                     print(f"[Transcriber] (云端) 填补: [{new_seg['start']:.2f}s -> {new_seg['end']:.2f}s] {text}")
+
+                if block_new_segments:
+                    self._annotate_segment_quality(block_new_segments)
+                for candidate in gaps_in_block:
+                    candidate_overlap = [
+                        seg for seg in block_new_segments
+                        if self._candidate_overlap(seg.get("start", 0), seg.get("end", 0), candidate)
+                    ]
+                    if not candidate_overlap:
+                        continue
+                    if candidate.get("kind") == "suspicious":
+                        originals = candidate.get("targets") or []
+                        if self._should_replace_refill_window(originals, candidate_overlap):
+                            replaced_targets.update(id(seg) for seg in originals)
+                            replacement_segments.extend(candidate_overlap)
+                            cand_start, cand_end = self._candidate_bounds(candidate)
+                            print(f"[Transcriber] (云端) 可疑区域补录采用新结果: {cand_start:.2f}s-{cand_end:.2f}s")
+                    else:
+                        added_segments.extend(candidate_overlap)
 
             except Exception as e:
                 print(f"[Transcriber] (云端) 填补块 {block_start:.1f}s-{block_end:.1f}s 出错: {e}")
@@ -1003,9 +1311,11 @@ class Transcriber:
                 except Exception:
                     pass
 
-        if new_segments:
-            results = results + new_segments
-            results.sort(key=lambda x: x.get("start", 0))
-            print(f"[Transcriber] (云端) 空白区间补录完成，新增 {len(new_segments)} 条片段")
+        if added_segments or replacement_segments:
+            results = self._finalize_refill_results(results, added_segments, replacement_segments, replaced_targets)
+            print(
+                f"[Transcriber] (云端) 空白区间补录完成，新增 {len(added_segments)} 条片段，"
+                f"替换 {len(replaced_targets)} 条可疑片段"
+            )
 
         return results

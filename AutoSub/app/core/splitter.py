@@ -136,32 +136,9 @@ class SubtitleSplitter:
                     continue
                 if progress_callback:
                     progress_callback(chunk_idx + 1, total_steps)
-                chunk_text = self._join_segment_texts(chunk_segs)
-                if not chunk_text.strip():
-                    continue
-                punct_density = sum(1 for c in chunk_text if c in '.!?,;:') / max(len(chunk_text), 1)
-                if punct_density < 0.005:
-                    chunk_text_for_llm = self._strip_punctuation(chunk_text)
-                else:
-                    chunk_text_for_llm = chunk_text
-                chunk_texts = self._split_chunk(chunk_text_for_llm, context, max_cjk, max_en, model, task_scope)
-                if chunk_texts is None:
-                    print(f"[Splitter] 第 {chunk_idx + 1} 块 LLM 失败，使用原始文本")
-                    chunk_texts = [s.get('optimized_text', s.get('text', '')) for s in chunk_segs]
-                else:
-                    # 先做轻量级长度校验，仅在长度偏差较大时才启用昂贵的内容保真对齐，
-                    # 避免每块都跑一遍全量 SequenceMatcher。
-                    combined_len = sum(len(t) for t in chunk_texts)
-                    src_len = len(chunk_text)
-                    ratio = combined_len / max(src_len, 1)
-                    if not (0.85 <= ratio <= 1.15):
-                        chunk_texts = self._enforce_original_content(chunk_texts, chunk_text)
-                        combined_len = sum(len(t) for t in chunk_texts)
-                        ratio = combined_len / max(src_len, 1)
-                    if not (0.85 <= ratio <= 1.30):
-                        print(f"[Splitter] 第 {chunk_idx + 1} 块完整性校验失败"
-                              f" (ratio={ratio:.2f}, combined={combined_len}, src={len(chunk_text)})，回退原文")
-                        chunk_texts = [s.get('optimized_text', s.get('text', '')) for s in chunk_segs]
+                _, chunk_texts = self._process_one_chunk(
+                    chunk_idx, chunk_segs, context, max_cjk, max_en, model, task_scope
+                )
                 if chunk_idx > 0 and head_overlap > 0:
                     overlap_segs = chunks[chunk_idx - 1][0][-head_overlap:]
                     overlap_char_count = sum(
@@ -245,6 +222,9 @@ class SubtitleSplitter:
         chunk_text = self._join_segment_texts(chunk_segs)
         if not chunk_text.strip():
             return (chunk_idx, [])
+        rule_texts = self._build_rule_based_chunk_texts(chunk_segs, max_cjk, max_en)
+        if not self._chunk_needs_llm(rule_texts, chunk_segs, max_cjk, max_en):
+            return (chunk_idx, rule_texts)
         punct_density = sum(1 for c in chunk_text if c in '.!?,;:') / max(len(chunk_text), 1)
         if punct_density < 0.005:
             chunk_text_for_llm = self._strip_punctuation(chunk_text)
@@ -268,8 +248,90 @@ class SubtitleSplitter:
                 ratio = combined_len / max(src_len, 1)
             if not (0.85 <= ratio <= 1.30):
                 print(f"[Splitter] 第 {chunk_idx + 1} 块完整性校验失败 (ratio={ratio:.2f})，回退原文")
-                chunk_texts = [s.get('optimized_text', s.get('text', '')) for s in chunk_segs]
+                chunk_texts = rule_texts or [s.get('optimized_text', s.get('text', '')) for s in chunk_segs]
         return (chunk_idx, chunk_texts)
+
+    @staticmethod
+    def _needs_space_between(left, right):
+        if not left or not right:
+            return False
+        if re.search(r'[\u3400-\u4dbf\u4e00-\u9fff]$', left):
+            return False
+        if re.match(r'^[\u3400-\u4dbf\u4e00-\u9fff]', right):
+            return False
+        if left.endswith(("-", "—", "/")) or right.startswith(("'", ".", ",", "!", "?", ";", ":")):
+            return False
+        return not left.endswith(" ")
+
+    def _join_text_pair(self, left, right):
+        left = (left or "").strip()
+        right = (right or "").strip()
+        if not left:
+            return right
+        if not right:
+            return left
+        glue = " " if self._needs_space_between(left, right) else ""
+        return f"{left}{glue}{right}"
+
+    @staticmethod
+    def _has_terminal_punctuation(text):
+        return bool(re.search(r'[。！？.!?…]["\')\]]*$', (text or "").strip()))
+
+    def _segment_exceeds_limit(self, text, max_cjk, max_en):
+        stripped = (text or "").strip()
+        if not stripped:
+            return False
+        if self._is_latin(stripped):
+            return len(re.findall(r"\w+", stripped)) > max_en
+        return len(stripped) > max_cjk
+
+    def _build_rule_based_chunk_texts(self, chunk_segs, max_cjk, max_en):
+        results = []
+        current = ""
+        current_suspicious = False
+        prev_seg = None
+        pause_split_sec = float(getattr(cfg.long_pause_split_sec, "value", _LONG_PAUSE_SPLIT_SEC) or _LONG_PAUSE_SPLIT_SEC)
+
+        for seg in chunk_segs:
+            text = (seg.get('optimized_text', seg.get('text', '')) or "").strip()
+            if not text:
+                continue
+
+            seg_suspicious = bool(seg.get("is_suspicious"))
+            if not current:
+                current = text
+                current_suspicious = seg_suspicious
+                prev_seg = seg
+                continue
+
+            gap = max(0.0, float(seg.get("start", 0) or 0) - float(prev_seg.get("end", 0) or 0)) if prev_seg else 0.0
+            force_boundary = (
+                current_suspicious
+                or seg_suspicious
+                or gap >= max(0.1, pause_split_sec)
+                or self._has_terminal_punctuation(current)
+            )
+
+            tentative = self._join_text_pair(current, text)
+            if force_boundary or self._segment_exceeds_limit(tentative, max_cjk, max_en):
+                results.append(current.strip())
+                current = text
+                current_suspicious = seg_suspicious
+            else:
+                current = tentative
+                current_suspicious = current_suspicious or seg_suspicious
+            prev_seg = seg
+
+        if current.strip():
+            results.append(current.strip())
+        return results
+
+    def _chunk_needs_llm(self, rule_texts, chunk_segs, max_cjk, max_en):
+        if not rule_texts:
+            return False
+        if any(seg.get("is_suspicious") for seg in chunk_segs):
+            return False
+        return any(self._segment_exceeds_limit(text, max_cjk, max_en) for text in rule_texts)
 
     @staticmethod
     def _join_segment_texts(segs):
@@ -1276,6 +1338,10 @@ STRICT RULES:
                     best_overlap = overlap
                     best_idx     = i
             ns["origin_idx"] = best_idx
+            source_seg = original_segments[best_idx]
+            ns["quality_score"] = source_seg.get("quality_score", 1.0)
+            ns["quality_flags"] = list(source_seg.get("quality_flags", []))
+            ns["is_suspicious"] = bool(source_seg.get("is_suspicious", False))
         return new_segments
 
     def _heuristic_merge(self, segments, max_cjk, max_en):

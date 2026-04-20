@@ -323,8 +323,8 @@ class FasterWhisperModelDialog(MessageBoxBase):
 
 
 class FasterWhisperManager(SettingCardGroup):
-    def __init__(self, parent=None):
-        super().__init__("Faster Whisper 管理", parent)
+    def __init__(self, parent=None, title="Faster Whisper 管理"):
+        super().__init__(title, parent)
         
         self.cpu_url = "https://modelscope.cn/models/bkfengg/whisper-cpp/resolve/master/whisper-faster.exe"
         self.gpu_url = "https://modelscope.cn/models/bkfengg/whisper-cpp/resolve/master/Faster-Whisper-XXL_r245.2_windows.7z"

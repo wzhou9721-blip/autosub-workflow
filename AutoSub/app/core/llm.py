@@ -700,13 +700,131 @@ class LLMTranslator:
                 )
             )
         return normalized
-        
-    def translate_batch(self, 
-                       batch_subtitles: List[Dict[str, Any]], 
-                       prev_context: str, 
+
+    @classmethod
+    def _merge_context_strings(cls, left: str, right: str, keep_tail: bool) -> str:
+        merged = " | ".join(part for part in [left, right] if part)
+        return cls._trim_overflow_context(merged, keep_tail=keep_tail) if merged else ""
+
+    @staticmethod
+    def _is_suspicious_subtitle(sub: Dict[str, Any]) -> bool:
+        return bool(sub.get("is_suspicious"))
+
+    def _build_translation_work_items(self, batch_subtitles: List[Dict[str, Any]]) -> List[tuple[int, int, bool]]:
+        if not batch_subtitles:
+            return []
+        if not any(self._is_suspicious_subtitle(sub) for sub in batch_subtitles):
+            return [(0, len(batch_subtitles), False)]
+
+        work_items = []
+        i = 0
+        total = len(batch_subtitles)
+        while i < total:
+            if self._is_suspicious_subtitle(batch_subtitles[i]):
+                end = min(total, i + 3)
+                while end > i + 1 and not any(self._is_suspicious_subtitle(sub) for sub in batch_subtitles[i:end]):
+                    end -= 1
+                work_items.append((i, end, True))
+                i = end
+            else:
+                start = i
+                while i < total and not self._is_suspicious_subtitle(batch_subtitles[i]):
+                    i += 1
+                work_items.append((start, i, False))
+        return work_items
+
+    def _build_sub_batch_contexts(
+        self,
+        batch_subtitles: List[Dict[str, Any]],
+        start: int,
+        end: int,
+        prev_context: str,
+        next_context: str,
+    ) -> tuple[str, str]:
+        local_prev = " | ".join(
+            (sub.get("text", "") or "").replace("\n", " ").strip()
+            for sub in batch_subtitles[max(0, start - 2):start]
+            if (sub.get("text", "") or "").strip()
+        )
+        local_next = " | ".join(
+            (sub.get("text", "") or "").replace("\n", " ").strip()
+            for sub in batch_subtitles[end:min(len(batch_subtitles), end + 2)]
+            if (sub.get("text", "") or "").strip()
+        )
+        merged_prev = self._merge_context_strings(prev_context, local_prev, keep_tail=True)
+        merged_next = self._merge_context_strings(local_next, next_context, keep_tail=False)
+        return merged_prev, merged_next
+
+    def _stabilize_suspicious_translations(
+        self,
+        batch_subtitles: List[Dict[str, Any]],
+        translated_batch: List[Dict[str, Any]],
+    ) -> List[Dict[str, Any]]:
+        stabilized = self._normalize_translated_batch_to_source(batch_subtitles, translated_batch)
+        for i, item in enumerate(stabilized):
+            if i >= len(batch_subtitles) or not batch_subtitles[i].get("is_suspicious"):
+                continue
+            src_text = (batch_subtitles[i].get("text") or "").strip()
+            cn = (item.get("cn") or "").strip()
+            if not cn:
+                item["cn"] = src_text
+                continue
+            if len(cn) > max(40, len(src_text) * 3) and len(src_text) <= 20:
+                item["cn"] = src_text
+                continue
+            prev_cn = (stabilized[i - 1].get("cn") or "").strip() if i > 0 else ""
+            next_cn = (stabilized[i + 1].get("cn") or "").strip() if i + 1 < len(stabilized) else ""
+            if cn and (cn == prev_cn or cn == next_cn) and cn != src_text:
+                item["cn"] = src_text
+        return stabilized
+
+    def translate_batch(self,
+                       batch_subtitles: List[Dict[str, Any]],
+                       prev_context: str,
                        next_context: str,
                        target_lang_name: str = "Chinese",
                        glossary: str = "") -> List[Dict[str, Any]]:
+        """翻译一个批次的字幕；可疑条目会自动拆小批并采用更保守策略。"""
+        work_items = self._build_translation_work_items(batch_subtitles)
+        if len(work_items) <= 1:
+            conservative = bool(work_items and work_items[0][2])
+            translated = self._translate_batch_core(
+                batch_subtitles,
+                prev_context,
+                next_context,
+                target_lang_name=target_lang_name,
+                glossary=glossary,
+                conservative=conservative,
+            )
+            return self._stabilize_suspicious_translations(batch_subtitles, translated)
+
+        merged_results: List[Dict[str, Any]] = []
+        for start, end, conservative in work_items:
+            sub_batch = batch_subtitles[start:end]
+            local_prev, local_next = self._build_sub_batch_contexts(
+                batch_subtitles, start, end, prev_context, next_context
+            )
+            merged_results.extend(
+                self._translate_batch_core(
+                    sub_batch,
+                    local_prev,
+                    local_next,
+                    target_lang_name=target_lang_name,
+                    glossary=glossary,
+                    conservative=conservative,
+                )
+            )
+        return self._stabilize_suspicious_translations(batch_subtitles, merged_results)
+
+    def _translate_batch_core(
+        self,
+        batch_subtitles: List[Dict[str, Any]],
+        prev_context: str,
+        next_context: str,
+        target_lang_name: str = "Chinese",
+        glossary: str = "",
+        conservative: bool = False,
+    ) -> List[Dict[str, Any]]:
         """
         翻译一个批次的字幕
         """
@@ -733,12 +851,14 @@ class LLMTranslator:
         filtered_glossary = self._filter_glossary_for_batch(batch_source_texts, glossary)
         glossary_block = f"Glossary (relevant terms only):\n{filtered_glossary}" if filtered_glossary else ""
 
+        suspicious_ids = [sub.get("index", 0) for sub in batch_subtitles if sub.get("is_suspicious")]
+
         # Generate target-language-specific style guidance to avoid translationese
         target_lang_style = ""
         if "chinese" in target_lang_name.lower() or target_lang_name == "Chinese":
             target_lang_style = (
-                '\n4. Use natural Chinese word order: place time/condition adverbials before the main clause. Avoid translationese fillers.'
-                '\n5. When one sentence spans adjacent subtitles, make the concatenated Chinese read naturally. You may redistribute phrase boundaries across neighboring subtitles to fit Chinese syntax, but do not drop meaning or change subtitle order.'
+                '\n4. Use natural Chinese word order inside each subtitle, but do not borrow or move meaning across subtitle boundaries unless the source is explicitly unfinished.'
+                '\n5. Keep subtitle boundaries stable. Do not redistribute neighboring source text just to make the Chinese smoother.'
                 '\n6. Never leave dangling modifiers or stranded fragments such as "...的", "...上的", or a lone function word/preposition in a subtitle.'
             )
         elif "japanese" in target_lang_name.lower() or target_lang_name == "Japanese":
@@ -747,6 +867,13 @@ class LLMTranslator:
             target_lang_style = "\n4. Use natural Korean SOV word order."
 
         def build_prompt(strict: bool):
+            conservative_block = ""
+            if conservative:
+                conservative_block = (
+                    "\n4. Low-confidence mode: these subtitles may come from uncertain ASR. Prefer literal translation, keep ambiguity, "
+                    "and NEVER complete partial thoughts or guess missing words."
+                    "\n5. If the source is fragmentary or awkward, the translation may also stay fragmentary or awkward. Do not smooth it into a fuller sentence."
+                )
             if strict:
                 return f"""You are a subtitle translation program. Output compressed JSON only.
 
@@ -759,9 +886,11 @@ Video Context: {self.video_context}
 - No Markdown, no explanation, no line breaks.
 
 # Translation Rules
-1. Translate idiomatically with context. Render slang and profanity by conveying the emotion, not literal meaning. Complete fragmented cross-subtitle sentences using context.
+1. Translate faithfully first, naturally second. Do not infer unstated meaning.
 2. Keep names, places, and terms consistent with context_before_translated.
-3. Follow target language reading conventions. Preserve the original tone and punctuation rhythm. Sentence-ending punctuation (periods, question marks, exclamation marks, ellipses) in the source MUST appear in the translation. Never merge multiple sentences into one unpunctuated run-on.{target_lang_style}
+3. Keep each subtitle aligned to its own source line. Do NOT redistribute content across neighboring subtitles unless the source is explicitly unfinished and the meaning is obvious.{conservative_block}{target_lang_style}
+7. Preserve the original tone and punctuation rhythm. Sentence-ending punctuation (periods, question marks, exclamation marks, ellipses) in the source MUST appear in the translation. Never merge multiple sentences into one unpunctuated run-on.
+8. Low-confidence IDs: {suspicious_ids if suspicious_ids else "None"}.
 
 # Example
 In: [{{"id":1,"text":"Hi"}}]
@@ -778,9 +907,11 @@ Video Context: {self.video_context}
 - No extra text.
 
 # Translation Rules
-1. Translate idiomatically with context. Render slang and profanity by conveying the emotion, not literal meaning. Complete fragmented cross-subtitle sentences using context.
+1. Translate faithfully first, naturally second. Do not infer unstated meaning.
 2. Keep names, places, and terms consistent with previous translations.
-3. Follow target language reading conventions. Preserve the original tone and punctuation rhythm. Sentence-ending punctuation in the source MUST appear in the translation. Never merge multiple sentences into one unpunctuated run-on.{target_lang_style}
+3. Keep each subtitle aligned to its own source line. Do NOT redistribute content across neighboring subtitles unless the source is explicitly unfinished and the meaning is obvious.{conservative_block}{target_lang_style}
+7. Preserve the original tone and punctuation rhythm. Sentence-ending punctuation in the source MUST appear in the translation. Never merge multiple sentences into one unpunctuated run-on.
+8. Low-confidence IDs: {suspicious_ids if suspicious_ids else "None"}.
 """
         user_payload = json.dumps({
             "context_before_translated": prev_context,
@@ -801,7 +932,7 @@ Video Context: {self.video_context}
                     {"role": "user", "content": user_payload}
                 ],
                 model=self.model,
-                temperature=0.2,
+                temperature=0.1 if conservative else 0.2,
                 config_prefix="llm",
                 max_tokens=dynamic_max_tokens,
                 expect_json=True,
@@ -819,7 +950,7 @@ Video Context: {self.video_context}
                         {"role": "user", "content": user_payload}
                     ],
                     model=self.model,
-                    temperature=0.2,
+                    temperature=0.1 if conservative else 0.2,
                     config_prefix="llm",
                     max_tokens=dynamic_max_tokens,
                     expect_json=False,
@@ -846,14 +977,14 @@ Video Context: {self.video_context}
                         print(f"[Translator] 第 {sub_id} 条缺失，已补全为原文: {sub.get('text', '')[:50]}")
 
             # ── 反思翻译（可选）────────────────────────────────────────────
-            if cfg.llm_reflect.value and translated_batch:
+            if (not conservative) and cfg.llm_reflect.value and translated_batch:
                 translated_batch = self._reflect_batch(
                     translated_batch, current_batch_json,
                     prev_context, next_context,
                     target_lang_name, glossary_block,
                     dynamic_max_tokens
                 )
-            elif translated_batch and self._needs_continuation_reflection(current_batch_json, translated_batch):
+            elif (not conservative) and translated_batch and self._needs_continuation_reflection(current_batch_json, translated_batch):
                 print("[Translator] 检测到跨条残句/悬空定语，触发定向反思修复")
                 translated_batch = self._reflect_batch(
                     translated_batch, current_batch_json,

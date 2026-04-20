@@ -4,7 +4,6 @@ from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QWidget, QVBoxLayout, QFileDialog
 from qfluentwidgets import (
     SmoothScrollArea,
-    ExpandLayout,
     SettingCardGroup,
     TitleLabel,
     FluentIcon as FIF,
@@ -15,6 +14,7 @@ from qfluentwidgets import (
     InfoBarPosition
 )
 from app.common.config import cfg, CONFIG_FILE
+from app.components.collapsible_setting_section import CollapsibleSettingSection
 from app.components.setting_cards import LineEditSettingCard, NumberSettingCard, PasswordSettingCard, DoubleNumberSettingCard
 from app.components.faster_whisper_manager import FasterWhisperManager
 from app.core.llm import llm_manager
@@ -47,9 +47,34 @@ class SettingInterface(SmoothScrollArea):
         
         self.vBoxLayout.addStretch(1)
 
+    def _addCollapsibleGroup(self, title: str, group: QWidget, expanded: bool = True):
+        if isinstance(group, SettingCardGroup):
+            self._stripGroupHeader(group)
+        section = CollapsibleSettingSection(title, group, self.scrollWidget, expanded=expanded)
+        self.vBoxLayout.addWidget(section)
+        return section
+
+    @staticmethod
+    def _stripGroupHeader(group: SettingCardGroup):
+        title_label = getattr(group, "titleLabel", None)
+        layout = getattr(group, "vBoxLayout", None)
+        if not title_label or not layout:
+            return
+
+        title_label.hide()
+        if layout.count() >= 1:
+            item = layout.takeAt(0)
+            if item and item.widget():
+                item.widget().setParent(None)
+
+        if layout.count() >= 1:
+            item = layout.itemAt(0)
+            if item and item.spacerItem():
+                layout.takeAt(0)
+
     def initGroups(self):
         # 1. 云端转录设置
-        self.asrGroup = SettingCardGroup("云端转录设置", self.scrollWidget)
+        self.asrGroup = SettingCardGroup("", self.scrollWidget)
 
         # 提供商切换（Whisper / Gladia）
         self.asrProviderCard = ComboBoxSettingCard(
@@ -146,16 +171,6 @@ class SettingInterface(SmoothScrollArea):
         self.asrGroup.addSettingCard(self.cloudAsrFallbackCard)
         self.asrGroup.addSettingCard(self.cloudAsrFallbackProviderCard)
 
-        self.cloudMultilingualGapThresholdCard = NumberSettingCard(
-            cfg.cloud_multilingual_gap_threshold_sec,
-            FIF.GLOBE,
-            "云端空白区间补录阈值 (s)",
-            "检测到未转录空白区间达到该时长时，自动触发云端二次转录。多语言模式下优先使用次要语言，单语言模式下沿用主语言",
-            self.asrGroup,
-            range=(3, 60)
-        )
-        self.asrGroup.addSettingCard(self.cloudMultilingualGapThresholdCard)
-
         # ── Gladia 转录调参 ───────────────────────────────────────────
         self.gladiaVocabIntensityCard = DoubleNumberSettingCard(
             cfg.gladia_vocabulary_intensity,
@@ -201,7 +216,7 @@ class SettingInterface(SmoothScrollArea):
         # 监听说话人分离开关，控制 max_speakers 显隐
         cfg.gladia_diarization.valueChanged.connect(self._updateGladiaDiarizationState)
 
-        self.vBoxLayout.addWidget(self.asrGroup)
+        self._addCollapsibleGroup("云端转录设置", self.asrGroup)
 
         # 初始化显示状态，并监听切换事件
         self._onAsrProviderChanged(cfg.asr_provider.value)
@@ -214,7 +229,7 @@ class SettingInterface(SmoothScrollArea):
         self._updateGladiaDiarizationState(cfg.gladia_diarization.value)
 
         # 2. 翻译设置
-        self.llmGroup = SettingCardGroup("翻译设置", self.scrollWidget)
+        self.llmGroup = SettingCardGroup("", self.scrollWidget)
         
         self.llmKeyCard = PasswordSettingCard(
             cfg.llm_api_key,
@@ -301,10 +316,10 @@ class SettingInterface(SmoothScrollArea):
         self.llmTestCard.clicked.connect(lambda: self._onTestConnection("llm"))
         self.llmGroup.addSettingCard(self.llmTestCard)
         
-        self.vBoxLayout.addWidget(self.llmGroup)
+        self._addCollapsibleGroup("翻译设置", self.llmGroup)
 
         # 3. 优化+断句设置
-        self.optimizeGroup = SettingCardGroup("优化+断句设置", self.scrollWidget)
+        self.optimizeGroup = SettingCardGroup("", self.scrollWidget)
         
         self.optimizeKeyCard = PasswordSettingCard(
             cfg.optimize_api_key,
@@ -372,10 +387,10 @@ class SettingInterface(SmoothScrollArea):
         self.optimizeGroup.addSettingCard(self.maxEnCard)
         self.optimizeGroup.addSettingCard(self.longPauseSplitCard)
         
-        self.vBoxLayout.addWidget(self.optimizeGroup)
+        self._addCollapsibleGroup("优化+断句设置", self.optimizeGroup)
 
         # 3.2 联网增强设置
-        self.searchGroup = SettingCardGroup("联网知识增强", self.scrollWidget)
+        self.searchGroup = SettingCardGroup("", self.scrollWidget)
         
         self.enableSearchCard = SwitchSettingCard(
             FIF.GLOBE,
@@ -436,10 +451,10 @@ class SettingInterface(SmoothScrollArea):
         self.searchGroup.addSettingCard(self.tavilyTestCard)
         self.searchGroup.addSettingCard(self.serperTestCard)
         
-        self.vBoxLayout.addWidget(self.searchGroup)
+        self._addCollapsibleGroup("联网知识增强", self.searchGroup)
 
         # 4. 溢出修复设置
-        self.fixGroup = SettingCardGroup("溢出修复设置", self.scrollWidget)
+        self.fixGroup = SettingCardGroup("", self.scrollWidget)
         
         self.fixKeyCard = PasswordSettingCard(
             cfg.fix_api_key,
@@ -487,10 +502,10 @@ class SettingInterface(SmoothScrollArea):
         self.fixTestCard.clicked.connect(lambda: self._onTestConnection("fix"))
         self.fixGroup.addSettingCard(self.fixTestCard)
         
-        self.vBoxLayout.addWidget(self.fixGroup)
+        self._addCollapsibleGroup("溢出修复设置", self.fixGroup)
 
         # 4.5 通用设置 (单字级时间戳)
-        self.generalGroup = SettingCardGroup("通用设置", self.scrollWidget)
+        self.generalGroup = SettingCardGroup("", self.scrollWidget)
         
         self.wordTimestampCard = SwitchSettingCard(
             FIF.TAG,
@@ -510,10 +525,10 @@ class SettingInterface(SmoothScrollArea):
         )
         self.generalGroup.addSettingCard(self.removePunctuationCard)
         
-        self.vBoxLayout.addWidget(self.generalGroup)
+        self._addCollapsibleGroup("通用设置", self.generalGroup)
 
         # 4.7 转录高级设置
-        self.advancedTranscriptionGroup = SettingCardGroup("转录高级设置 (Faster-Whisper)", self.scrollWidget)
+        self.advancedTranscriptionGroup = SettingCardGroup("", self.scrollWidget)
 
         self.beamSizeCard = NumberSettingCard(
             cfg.beam_size,
@@ -623,14 +638,6 @@ class SettingInterface(SmoothScrollArea):
             self.advancedTranscriptionGroup,
             range=(0, 500)
         )
-        self.multilingualGapThresholdCard = NumberSettingCard(
-            cfg.multilingual_gap_threshold_sec,
-            FIF.GLOBE,
-            "空白区间补录阈值 (s)",
-            "检测到未转录空白区间达到该时长时，自动启动二次转录。多语言模式下优先使用次要语言，单语言模式下沿用主语言；推荐 10 秒",
-            self.advancedTranscriptionGroup,
-            range=(3, 60)
-        )
         self.conditionOnPreviousTextCard = SwitchSettingCard(
             FIF.HISTORY,
             "参考上下文 (Condition On Previous)",
@@ -652,11 +659,10 @@ class SettingInterface(SmoothScrollArea):
         self.advancedTranscriptionGroup.addSettingCard(self.noSpeechThresholdCard)
         self.advancedTranscriptionGroup.addSettingCard(self.logProbThresholdCard)
         self.advancedTranscriptionGroup.addSettingCard(self.compressionRatioThresholdCard)
-        self.advancedTranscriptionGroup.addSettingCard(self.multilingualGapThresholdCard)
         self.advancedTranscriptionGroup.addSettingCard(self.conditionOnPreviousTextCard)
         # 5. Faster Whisper 管理
-        self.fasterWhisperGroup = FasterWhisperManager(self.scrollWidget)
-        self.vBoxLayout.addWidget(self.fasterWhisperGroup)
+        self.fasterWhisperGroup = FasterWhisperManager(self.scrollWidget, title="")
+        self._addCollapsibleGroup("Faster Whisper 管理", self.fasterWhisperGroup)
 
         cfg.vad_filter.valueChanged.connect(self._updateVadFilterState)
         cfg.transcription_hallucination_filter.valueChanged.connect(
@@ -667,10 +673,10 @@ class SettingInterface(SmoothScrollArea):
             cfg.transcription_hallucination_filter.value
         )
 
-        self.vBoxLayout.addWidget(self.advancedTranscriptionGroup)
+        self._addCollapsibleGroup("转录高级设置 (Faster-Whisper)", self.advancedTranscriptionGroup)
 
         # 6. 配置管理
-        self.configGroup = SettingCardGroup("配置管理", self.scrollWidget)
+        self.configGroup = SettingCardGroup("", self.scrollWidget)
 
         self.exportConfigCard = PushSettingCard(
             "导出配置",
@@ -702,7 +708,7 @@ class SettingInterface(SmoothScrollArea):
         self.configGroup.addSettingCard(self.exportConfigCard)
         self.configGroup.addSettingCard(self.importConfigCard)
         self.configGroup.addSettingCard(self.openLogCard)
-        self.vBoxLayout.addWidget(self.configGroup)
+        self._addCollapsibleGroup("配置管理", self.configGroup)
 
     def _onTestConnection(self, config_prefix):
         """ 测试 LLM 类 API 连接（异步，不阻塞 UI） """
