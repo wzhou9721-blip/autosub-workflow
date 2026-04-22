@@ -146,6 +146,13 @@ class DoubleNumberSettingCard(SettingCard):
             self.spinBox.setValue(float(value))
 
 
+class NoWheelSlider(Slider):
+    """忽略鼠标滚轮，避免滚动页面时误改滑块数值。"""
+
+    def wheelEvent(self, event):
+        event.ignore()
+
+
 class CalibrationPanel(CardWidget):
     """ 字幕溢出检测参数面板（模式切换 + 字号 + 最大不换行字数）"""
 
@@ -181,7 +188,7 @@ class CalibrationPanel(CardWidget):
         self.font_header_layout.addWidget(self.font_label)
         self.font_header_layout.addStretch(1)
         self.font_header_layout.addWidget(self.font_value_label)
-        self.font_slider = Slider(Qt.Orientation.Horizontal, self)
+        self.font_slider = NoWheelSlider(Qt.Orientation.Horizontal, self)
         self.font_slider.setRange(1, 100)
         self.font_slider.setFixedWidth(200)
         self.font_layout.addLayout(self.font_header_layout)

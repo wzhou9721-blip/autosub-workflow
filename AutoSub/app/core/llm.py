@@ -860,6 +860,12 @@ class LLMTranslator:
                 '\n4. Use natural Chinese word order inside each subtitle, but do not borrow or move meaning across subtitle boundaries unless the source is explicitly unfinished.'
                 '\n5. Keep subtitle boundaries stable. Do not redistribute neighboring source text just to make the Chinese smoother.'
                 '\n6. Never leave dangling modifiers or stranded fragments such as "...的", "...上的", or a lone function word/preposition in a subtitle.'
+                '\n7. English clause reordering for Chinese is mandatory:'
+                '\n   - Relative clauses: translate "the X that/which/who ..." as "...的X", or split into two short Chinese clauses. Do NOT keep the English order "X，那个...".'
+                '\n   - Time/condition/concession clauses: move when/if/because/although/after/before clauses before the main action when Chinese reads better, e.g. "如果/当/因为/虽然...，...".'
+                '\n   - Purpose/result clauses: render "so that / in order to / which means" as "为了... / 这样... / 这意味着...", placed where natural in Chinese.'
+                '\n   - Long noun phrases: unpack them into natural Chinese modifier-before-noun order; avoid stacked literal phrases like "在...上的...的...".'
+                '\n8. Avoid English-shaped Chinese. Bad: "我们需要解决的问题是它很复杂"; Better: "这个问题很复杂，我们需要解决它" or "我们需要解决这个复杂的问题".'
             )
         elif "japanese" in target_lang_name.lower() or target_lang_name == "Japanese":
             target_lang_style = "\n4. Use natural Japanese SOV word order."
@@ -1128,7 +1134,8 @@ Review criteria:
 - Naturalness: Does it read like native {target_lang_name}, not translated text?
 - Consistency: Are names, terms, and tone consistent with context?
 - Punctuation: Sentence-ending punctuation must be preserved.
-- Cross-subtitle flow: if adjacent subtitles form one sentence, the translations must read naturally when concatenated. Redistribute phrase boundaries across neighboring subtitles if needed, and avoid dangling modifiers or orphaned fragments such as "...的", "...上的", or lone function words.
+- Chinese clause order: if the target language is Chinese, actively fix English-shaped clause order. Relative clauses should become "...的X" or short separated Chinese clauses; time/condition/cause/concession clauses should usually move before the main action; long noun phrases should be unpacked into natural Chinese modifier-before-noun order.
+- Cross-subtitle flow: if adjacent subtitles form one sentence, the translations must read naturally when concatenated, but do NOT borrow meaning from neighboring subtitles just to make one line smoother. Avoid dangling modifiers or orphaned fragments such as "...的", "...上的", or lone function words.
 
 Output ONLY compressed JSON: {{"translations":[{{"id":1,"cn":"improved translation"}}]}}
 No explanation, no markdown."""
