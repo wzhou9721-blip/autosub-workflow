@@ -32,6 +32,9 @@ from app.components.setting_cards import CalibrationPanel
 
 class OverflowFixThread(QThread):
     _TASK_SCOPE_PREFIX = "overflow_fix"
+    _BATCH_REPAIR_GROUP_SIZE = 4
+    _MAX_ITERATIONS = 3
+    _MIN_SEG_DURATION = 1.2
     """ Thread for running overflow repair """
     progress_update = pyqtSignal(int, int) # current, total
     finished_signal = pyqtSignal(bool, str) # success, message
@@ -44,6 +47,119 @@ class OverflowFixThread(QThread):
         self.is_running = True
         self.new_subtitles = []
         self._task_scope = f"{self._TASK_SCOPE_PREFIX}:{time.time_ns()}:{id(self)}"
+
+    @staticmethod
+    def _overflow_excess(subtitles: List[Dict[str, Any]], threshold: int) -> int:
+        return sum(
+            max(0, len((sub.get("translated_text") or "")) - threshold)
+            for sub in subtitles
+        )
+
+    def _segments_to_subtitles(self, parent_sub: Dict[str, Any], segments: List[Dict[str, str]]) -> List[Dict[str, Any]]:
+        start = parent_sub.get("start", 0)
+        end = parent_sub.get("end", 0)
+        duration = end - start
+        total_seg_len = sum(len(seg.get("cn", "")) for seg in segments) or 1
+
+        durations = [duration * (len(seg.get("cn", "")) / total_seg_len) for seg in segments]
+        durations = [max(d, self._MIN_SEG_DURATION) for d in durations]
+        total_floored = sum(durations)
+        if total_floored > duration > 0:
+            scale = duration / total_floored
+            durations = [d * scale for d in durations]
+
+        new_subs = []
+        current_start = start
+        parent_speaker = parent_sub.get("speaker")
+        for seg, seg_duration in zip(segments, durations):
+            seg_end = current_start + seg_duration
+            entry = {
+                "start": current_start,
+                "end": seg_end,
+                "text": seg.get("text", ""),
+                "translated_text": seg.get("cn", "")
+            }
+            if parent_speaker is not None:
+                entry["speaker"] = parent_speaker
+            new_subs.append(entry)
+            current_start = seg_end
+        return new_subs
+
+    def _repair_single_segment(self, translator, current_subs, idx: int) -> List[Dict[str, Any]]:
+        sub = current_subs[idx]
+        if not self.is_running:
+            return [sub]
+
+        text = sub.get("text", "")
+        cn = (sub.get("translated_text") or "")
+        prev_context, next_context = translator.build_overflow_contexts(current_subs, idx)
+        try:
+            segments = translator.repair_overflow(
+                text,
+                cn,
+                self.threshold,
+                prev_context=prev_context,
+                next_context=next_context,
+            )
+            TextSplitter.redistribute_segment_texts_by_weights(text, segments, weight_key="cn")
+            return self._segments_to_subtitles(sub, segments)
+        except Exception as e:
+            print(f"Repair failed for index {sub.get('index')}: {e}")
+            return [sub]
+
+    def _repair_group(self, translator, current_subs, indices: List[int]) -> Dict[int, List[Dict[str, Any]]]:
+        results: Dict[int, List[Dict[str, Any]]] = {}
+        if not indices:
+            return results
+
+        batch_items = []
+        for idx in indices:
+            if not self.is_running:
+                return {i: [current_subs[i]] for i in indices}
+            sub = current_subs[idx]
+            prev_context, next_context = translator.build_overflow_contexts(current_subs, idx)
+            batch_items.append({
+                "id": idx,
+                "text": sub.get("text", ""),
+                "translated_text": sub.get("translated_text", ""),
+                "prev_context": prev_context,
+                "next_context": next_context,
+            })
+
+        batch_results = {}
+        if len(batch_items) >= 2:
+            try:
+                batch_results = translator.repair_overflow_batch(batch_items, self.threshold)
+            except Exception as e:
+                print(f"[OverflowFix] Batch repair fallback: {e}")
+
+        for idx in indices:
+            if not self.is_running:
+                results[idx] = [current_subs[idx]]
+                continue
+            repaired_segments = batch_results.get(idx)
+            if repaired_segments:
+                TextSplitter.redistribute_segment_texts_by_weights(
+                    current_subs[idx].get("text", ""),
+                    repaired_segments,
+                    weight_key="cn",
+                )
+                results[idx] = self._segments_to_subtitles(current_subs[idx], repaired_segments)
+            else:
+                results[idx] = self._repair_single_segment(translator, current_subs, idx)
+        return results
+
+    @staticmethod
+    def _rebuild_subtitles(total: int, current_subs: List[Dict[str, Any]], results_map: Dict[int, List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
+        rebuilt = []
+        current_id = 1
+        for i in range(total):
+            repaired = results_map.get(i, [current_subs[i]])
+            for rs in repaired:
+                rs["index"] = current_id
+                rebuilt.append(rs)
+                current_id += 1
+        return rebuilt
 
     def run(self):
         from app.core.llm import llm_manager
@@ -63,11 +179,9 @@ class OverflowFixThread(QThread):
             translator = LLMTranslator(task_scope=self._task_scope)
             max_workers = cfg.llm_max_workers.value
             
-            # Iterative repair loop (max 3 passes)
-            max_iterations = 3
             current_subs = self.subtitles
             
-            for attempt in range(max_iterations):
+            for attempt in range(self._MAX_ITERATIONS):
                 if not self.is_running:
                      raise TaskCancelledError("任务已取消")
                 
@@ -84,103 +198,47 @@ class OverflowFixThread(QThread):
 
                 total = len(current_subs)
                 n_overflow = len(overflow_indices)
+                prev_excess = self._overflow_excess(current_subs, self.threshold)
                 self.status_update.emit(f"第 {attempt + 1} 轮修复中（{n_overflow} 条溢出）...")
-
-                # Define worker function — only called for overflow items
-                def repair_segment(data):
-                    idx, sub = data
-                    if not self.is_running:
-                        return idx, [sub]
-                    text = sub.get("text", "")
-                    cn = (sub.get("translated_text") or "")
-                    prev_context, next_context = translator.build_overflow_contexts(current_subs, idx)
-                    try:
-                        segments = translator.repair_overflow(
-                            text,
-                            cn,
-                            self.threshold,
-                            prev_context=prev_context,
-                            next_context=next_context,
-                        )
-                        TextSplitter.redistribute_segment_texts_by_weights(text, segments, weight_key="cn")
-
-                        # Timestamp interpolation with minimum duration floor
-                        start = sub.get("start", 0)
-                        end = sub.get("end", 0)
-                        duration = end - start
-                        MIN_SEG_DURATION = 1.2  # seconds — shortest readable subtitle
-
-                        total_seg_len = sum(len(seg.get("cn", "")) for seg in segments)
-                        if total_seg_len == 0: total_seg_len = 1
-
-                        durations = [duration * (len(seg.get("cn", "")) / total_seg_len) for seg in segments]
-                        durations = [max(d, MIN_SEG_DURATION) for d in durations]
-                        total_floored = sum(durations)
-                        if total_floored > duration > 0:
-                            scale = duration / total_floored
-                            durations = [d * scale for d in durations]
-
-                        new_subs = []
-                        current_start = start
-                        parent_speaker = sub.get("speaker")
-                        for seg, seg_duration in zip(segments, durations):
-                            seg_end = current_start + seg_duration
-                            entry = {
-                                "start": current_start,
-                                "end": seg_end,
-                                "text": seg.get("text", ""),
-                                "translated_text": seg.get("cn", "")
-                            }
-                            if parent_speaker is not None:
-                                entry["speaker"] = parent_speaker
-                            new_subs.append(entry)
-                            current_start = seg_end
-                        return idx, new_subs
-                    except Exception as e:
-                        print(f"Repair failed for index {sub.get('index')}: {e}")
-                        return idx, [sub]
 
                 # 非溢出条目直接填入结果字典
                 overflow_set = set(overflow_indices)
-                results_map = {i: [sub] for i, sub in enumerate(current_subs) if i not in overflow_set}
+                results_map = {i: [sub] for i, sub in enumerate(current_subs) if i not in set(overflow_indices)}
 
                 # 溢出条目并行修复（只读邻接上下文，可安全并行）
-                max_workers = cfg.llm_max_workers.value
+                group_size = max(2, min(self._BATCH_REPAIR_GROUP_SIZE, max_workers + 1))
+                overflow_groups = [
+                    sorted(overflow_indices)[k:k + group_size]
+                    for k in range(0, len(overflow_indices), group_size)
+                ]
                 processed_count = 0
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                worker_count = max(1, min(max_workers, len(overflow_groups)))
+                with ThreadPoolExecutor(max_workers=worker_count) as executor:
                     future_to_idx = {
-                        executor.submit(repair_segment, (i, current_subs[i])): i
-                        for i in sorted(overflow_indices)
+                        executor.submit(self._repair_group, translator, current_subs, group): tuple(group)
+                        for group in overflow_groups
                     }
                     for future in as_completed(future_to_idx):
                         if not self.is_running:
                             # 取消前写出已修复部分
-                            self.new_subtitles = []
-                            current_id = 1
-                            for j in range(total):
-                                repaired = results_map.get(j, [current_subs[j]])
-                                for rs in repaired:
-                                    rs["index"] = current_id
-                                    self.new_subtitles.append(rs)
-                                    current_id += 1
+                            self.new_subtitles = self._rebuild_subtitles(total, current_subs, results_map)
                             raise TaskCancelledError("任务已取消")
-                        idx, repaired_subs = future.result()
-                        results_map[idx] = repaired_subs
-                        processed_count += 1
-                        self.progress_update.emit(processed_count, n_overflow)
+                        group_results = future.result()
+                        results_map.update(group_results)
+                        processed_count += len(group_results)
+                        self.progress_update.emit(min(processed_count, n_overflow), n_overflow)
 
                 # Reconstruct the list in order
-                self.new_subtitles = []
-                current_id = 1
-                for i in range(total):
-                    repaired = results_map.get(i, [current_subs[i]])
-                    for rs in repaired:
-                        rs["index"] = current_id
-                        self.new_subtitles.append(rs)
-                        current_id += 1
+                self.new_subtitles = self._rebuild_subtitles(total, current_subs, results_map)
                 
                 # Update input for next iteration
                 current_subs = self.new_subtitles
+                next_excess = self._overflow_excess(current_subs, self.threshold)
+                if next_excess <= 0:
+                    break
+                if next_excess >= prev_excess:
+                    print(f"[OverflowFix] No further overflow improvement on pass {attempt + 1}, stopping early.")
+                    break
             
             self.finished_signal.emit(True, "修复完成")
             
