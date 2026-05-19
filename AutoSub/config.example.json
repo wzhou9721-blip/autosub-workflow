@@ -1,0 +1,90 @@
+{
+    "Task": {
+        "ASRModel": "base",
+        "GlossaryPath": "",
+        "SourceLanguage": "Auto",
+        "TargetLanguage": "Chinese",
+        "TranscribeMode": "本地",
+        "VideoContext": "",
+        "WordLevelTimestamps": true
+    },
+    "ASR": {
+        "ApiKey": "",
+        "BaseUrl": "",
+        "Model": "",
+        "Provider": "Whisper",
+        "FallbackEnabled": true,
+        "FallbackProvider": "Gladia",
+        "GladiaKey": ""
+    },
+    "Transcription": {
+        "BeamSize": 5,
+        "BestOf": 5,
+        "CloudMultilingualGapThresholdSec": 10,
+        "CompressionRatioThreshold": 2.0,
+        "ConditionOnPreviousText": false,
+        "GapFillEnabled": false,
+        "LogProbThreshold": -1.0,
+        "MultilingualMode": false,
+        "MultilingualGapThresholdSec": 15,
+        "NoSpeechThreshold": 0.7,
+        "Patience": 1.0,
+        "RepetitionPenalty": 1.2,
+        "SecondaryLanguage": "Auto",
+        "HallucinationFilter": true,
+        "VadFilter": true,
+        "VadMinSilenceDurationMs": 300,
+        "VadMinSpeechDurationMs": 100,
+        "VadSpeechPadMs": 400,
+        "VadThreshold": 0.3
+    },
+    "Context": {
+        "ApiKey": "",
+        "BaseUrl": "",
+        "Model": ""
+    },
+    "Search": {
+        "Enable": false,
+        "Provider": "Tavily",
+        "SerperKey": "",
+        "TavilyKey": ""
+    },
+    "FasterWhisper": {
+        "Device": "CPU"
+    },
+    "Fix": {
+        "ApiKey": "",
+        "BaseUrl": "",
+        "Model": "",
+        "ReflectRounds": 1
+    },
+    "LLM": {
+        "ApiKey": "",
+        "BaseUrl": "",
+        "BatchSize": 10,
+        "MaxWorkers": 3,
+        "Model": "",
+        "Reflect": false,
+        "Mode": "折中",
+        "HallucinationFilter": true
+    },
+    "Split": {
+        "LongPauseSplitSec": 0.5,
+        "MaxWordCountCJK": 18,
+        "MaxWordCountEnglish": 12
+    },
+    "Optimize": {
+        "ApiKey": "",
+        "BaseUrl": "",
+        "Model": ""
+    },
+    "Text": {
+        "RemovePunctuation": false
+    },
+    "Workflow": {
+        "Optimize": true,
+        "OverflowFix": true,
+        "Split": true,
+        "Translate": true
+    }
+}

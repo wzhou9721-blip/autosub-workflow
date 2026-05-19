@@ -15,6 +15,7 @@ AutoSub/build/
 AutoSub/dist/
 AutoSub/models/
 AutoSub/bin/
+AutoSub/config.json
 AutoSub/error.log
 AutoSub/temp_batch_session_state.json
 AutoSub/temp_split_resume.json
