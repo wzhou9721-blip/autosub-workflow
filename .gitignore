@@ -11,12 +11,16 @@
 *.log
 
 # AutoSub packaged artifacts and local runtime data
+1.0版本——简易处理/
+AutoSub_macOS_package_*.zip
+目标改进.txt
 AutoSub/build/
 AutoSub/dist/
 AutoSub/models/
 AutoSub/bin/
 AutoSub/config.json
 AutoSub/error.log
+AutoSub/realtime_capture_sessions/
 AutoSub/temp_batch_session_state.json
 AutoSub/temp_split_resume.json
 AutoSub/temp_translate_resume_*.json
