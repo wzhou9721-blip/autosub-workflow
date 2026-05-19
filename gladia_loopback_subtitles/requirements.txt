@@ -1,8 +1,0 @@
-numpy<2
-pyaudiowpatch
-PyQt6
-PyQt6-Fluent-Widgets
-python-dotenv
-requests
-soundcard
-websockets

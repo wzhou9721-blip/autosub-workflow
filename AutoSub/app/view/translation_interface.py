@@ -26,6 +26,7 @@ from app.common.export_utils import write_runtime_log
 from app.common.text_utils import TextSplitter, clean_punctuation_text
 from app.common.utils import fix_timestamp_overlaps
 from app.common.thread import TaskCancelledError
+from app.core.context_enhancer import build_semantic_map
 from app.core.llm import LLMTranslator
 from app.core.project import project_manager
 from app.components.setting_cards import CalibrationPanel
@@ -33,6 +34,7 @@ from app.components.setting_cards import CalibrationPanel
 class OverflowFixThread(QThread):
     _TASK_SCOPE_PREFIX = "overflow_fix"
     _BATCH_REPAIR_GROUP_SIZE = 4
+    _MAX_BATCH_FAILURES_BEFORE_LOCAL_ONLY = 3
     _MAX_ITERATIONS = 3
     _MIN_SEG_DURATION = 1.2
     """ Thread for running overflow repair """
@@ -47,6 +49,8 @@ class OverflowFixThread(QThread):
         self.is_running = True
         self.new_subtitles = []
         self._task_scope = f"{self._TASK_SCOPE_PREFIX}:{time.time_ns()}:{id(self)}"
+        self._batch_failure_count = 0
+        self._local_only_fallback = False
 
     @staticmethod
     def _overflow_excess(subtitles: List[Dict[str, Any]], threshold: int) -> int:
@@ -85,6 +89,29 @@ class OverflowFixThread(QThread):
             current_start = seg_end
         return new_subs
 
+    def _fallback_split_subtitle(self, sub: Dict[str, Any]) -> List[Dict[str, Any]]:
+        """Fast deterministic fallback when the repair model does not return valid JSON."""
+        text = sub.get("text", "")
+        cn = sub.get("translated_text") or ""
+        try:
+            repaired = TextSplitter.split_subtitle(
+                cn,
+                text,
+                sub.get("start", 0),
+                sub.get("end", 0),
+                self.threshold,
+            )
+        except Exception as e:
+            print(f"[OverflowFix] Local fallback failed for index {sub.get('index')}: {e}")
+            return [sub]
+
+        speaker = sub.get("speaker")
+        for item in repaired:
+            if speaker is not None:
+                item["speaker"] = speaker
+            item.setdefault("optimized_text", item.get("text", ""))
+        return repaired or [sub]
+
     def _repair_single_segment(self, translator, current_subs, idx: int) -> List[Dict[str, Any]]:
         sub = current_subs[idx]
         if not self.is_running:
@@ -105,12 +132,14 @@ class OverflowFixThread(QThread):
             return self._segments_to_subtitles(sub, segments)
         except Exception as e:
             print(f"Repair failed for index {sub.get('index')}: {e}")
-            return [sub]
+            return self._fallback_split_subtitle(sub)
 
     def _repair_group(self, translator, current_subs, indices: List[int]) -> Dict[int, List[Dict[str, Any]]]:
         results: Dict[int, List[Dict[str, Any]]] = {}
         if not indices:
             return results
+        if self._local_only_fallback:
+            return {idx: self._fallback_split_subtitle(current_subs[idx]) for idx in indices}
 
         batch_items = []
         for idx in indices:
@@ -132,6 +161,10 @@ class OverflowFixThread(QThread):
                 batch_results = translator.repair_overflow_batch(batch_items, self.threshold)
             except Exception as e:
                 print(f"[OverflowFix] Batch repair fallback: {e}")
+                self._batch_failure_count += 1
+                if self._batch_failure_count >= self._MAX_BATCH_FAILURES_BEFORE_LOCAL_ONLY:
+                    self._local_only_fallback = True
+                    print("[OverflowFix] Too many invalid batch responses; switching remaining items to local fallback.")
 
         for idx in indices:
             if not self.is_running:
@@ -146,7 +179,7 @@ class OverflowFixThread(QThread):
                 )
                 results[idx] = self._segments_to_subtitles(current_subs[idx], repaired_segments)
             else:
-                results[idx] = self._repair_single_segment(translator, current_subs, idx)
+                results[idx] = self._fallback_split_subtitle(current_subs[idx])
         return results
 
     @staticmethod
@@ -286,6 +319,21 @@ class TranslationThread(QThread):
             batch_size = cfg.llm_batch_size.value
             max_workers = cfg.llm_max_workers.value
             mode = cfg.llm_translation_mode.value
+            translation_start_ts = time.time()
+            semantic_map = ""
+            # Short clips usually have enough local context in prev/next windows.
+            # Skipping the extra semantic-map LLM call avoids a large fixed delay.
+            if total > max(batch_size * 2, 40):
+                semantic_start_ts = time.time()
+                self.status_update.emit("正在生成翻译语义上下文...")
+                semantic_map = build_semantic_map(
+                    self.subtitles,
+                    translator.video_context,
+                    task_scope=self._task_scope,
+                )
+                print(f"[TranslationTiming] semantic_map={time.time() - semantic_start_ts:.1f}s, chars={len(semantic_map)}")
+            else:
+                print(f"[TranslationTiming] semantic_map=skipped, total={total}, batch_size={batch_size}")
 
             # ── 断点续传：跳过已翻译的批次 ──────────────────────────────────
             start_index = 0
@@ -335,18 +383,23 @@ class TranslationThread(QThread):
 
             def do_translate(batch, prev_ctx, next_ctx):
                 """执行单批翻译，返回 (translated_data, error_str|None)。"""
+                batch_start_ts = time.time()
+                batch_label = f"{batch[0].get('index', '?')}-{batch[-1].get('index', '?')}" if batch else "empty"
                 try:
                     data = translator.translate_batch(
                         batch,
                         prev_context=prev_ctx,
                         next_context=next_ctx,
-                        glossary=self.glossary
+                        glossary=self.glossary,
+                        semantic_context=semantic_map,
                     )
+                    print(f"[TranslationTiming] batch {batch_label}={time.time() - batch_start_ts:.1f}s")
                     return data, None
                 except Exception as e:
                     err_text = str(e)
                     if "任务已取消" not in err_text:
                         print(f"[Translation] Batch error: {err_text}")
+                    print(f"[TranslationTiming] batch {batch_label}=failed after {time.time() - batch_start_ts:.1f}s")
                     for sub in batch:
                         if not (sub.get("translated_text") or "").strip():
                             sub["translated_text"] = sub.get("text", "")
@@ -523,6 +576,7 @@ class TranslationThread(QThread):
                 self.status_update.emit(f"漏译回退原文 ({len(still_missing)} 条)")
                 print(f"[Translation] 警告: 仍有 {len(still_missing)} 条字幕未翻译")
 
+            print(f"[TranslationTiming] total={time.time() - translation_start_ts:.1f}s")
             self.finished_signal.emit(True, "翻译完成")
 
         except TaskCancelledError:
@@ -598,8 +652,8 @@ class RepairPreviewCard(CardWidget):
                 font-size: 15px;
                 background: transparent;
                 border: none;
-                selection-background-color: #3FA266;
-                selection-color: #FFFFFF;
+                selection-background-color: #07C160;
+                selection-color: #07140C;
             }
             QTextEdit:hover {
                 background: rgba(255, 255, 255, 0.05);
@@ -723,13 +777,13 @@ class SubtitleCard(CardWidget):
         self.trans_edit.setPlaceholderText("译文")
         self.default_trans_style = """
             QTextEdit {
-                color: #3FA266;
+                color: #07C160;
                 background: transparent;
                 border: none;
                 font-size: 15px;
                 font-weight: 500;
-                selection-background-color: #3FA266;
-                selection-color: #FFFFFF;
+                selection-background-color: #07C160;
+                selection-color: #07140C;
             }
             QTextEdit:hover {
                 background: rgba(255, 255, 255, 0.05);
@@ -747,8 +801,8 @@ class SubtitleCard(CardWidget):
                 border: none;
                 font-size: 15px;
                 font-weight: 500;
-                selection-background-color: #3FA266;
-                selection-color: #FFFFFF;
+                selection-background-color: #07C160;
+                selection-color: #07140C;
             }
             QTextEdit:hover {
                 background: rgba(255, 255, 255, 0.05);

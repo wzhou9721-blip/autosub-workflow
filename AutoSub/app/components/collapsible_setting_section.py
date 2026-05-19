@@ -29,7 +29,7 @@ QToolButton {
     text-align: left;
 }
 QToolButton:hover {
-    color: #3FA266;
+    color: #07C160;
 }
 """
         )
@@ -57,4 +57,3 @@ QToolButton:hover {
     def setExpanded(self, expanded: bool) -> None:
         self.toggleButton.setChecked(expanded)
         self._onToggled(expanded)
-

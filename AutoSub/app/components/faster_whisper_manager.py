@@ -78,7 +78,7 @@ class FasterWhisperModelDialog(MessageBoxBase):
         # 内容区使用不透明背景，避免模型管理界面背景缺失（与 Fluent 设置页一致）
         if isDarkTheme():
             self.widget.setStyleSheet(
-                "QFrame#centerWidget { background-color: #252525; border: none; border-radius: 8px; }"
+                "QFrame#centerWidget { background-color: #2B2C2F; border: none; border-radius: 8px; }"
             )
         else:
             self.widget.setStyleSheet(
@@ -187,7 +187,7 @@ class FasterWhisperModelDialog(MessageBoxBase):
         status_item = QTableWidgetItem(status_text)
         status_item.setTextAlignment(Qt.AlignmentFlag.AlignCenter)
         if is_downloaded:
-            status_item.setForeground(QColor("#3FA266"))
+            status_item.setForeground(QColor("#07C160"))
         self.model_table.setItem(row, 2, status_item)
         
         # 操作按钮

@@ -5,6 +5,7 @@ import re
 from app.common.config import cfg
 from app.common.runtime_state import OPTIMIZE_RESUME_FILE, load_json_file, save_json_atomic, safe_unlink
 from app.common.utils import fix_timestamp_overlaps
+from app.core.context_enhancer import enhance_context
 from app.core.llm import llm_manager
 from app.core.search import search_manager
 
@@ -26,6 +27,7 @@ class SubtitleOptimizer:
             return []
 
         # 预先检查时间戳重叠
+        context = enhance_context(context, task_scope=task_scope)
         segments = fix_timestamp_overlaps(segments)
 
         # 断点续传：尝试加载上次中断时保存的优化进度
@@ -106,12 +108,13 @@ class SubtitleOptimizer:
 
             prompt = f"""
 # Task
-Correct ASR errors (typos, punctuation) in the subtitles below.
+Correct ASR errors in the subtitles below. Use the video context to fix
+obvious sports-domain recognition errors, but stay conservative.
 
 # Rules
-1. **NO FACTUAL CHANGES**: Do NOT replace names, places, or orgs using external knowledge. Keep them as transcribed.
-2. **NO ADDED CONTENT**: Do NOT add any new sentences, clauses, or words that are not in the original. Only fix typos and punctuation. The output must not contain words or phrases that do not appear in the input.
-3. **NO GUESSING**: If unsure about a name/place, keep the original token.
+1. **PRESERVE PERSON NAMES**: Do NOT change player, coach, journalist, or staff names. If unsure whether a token is a person name, keep it exactly as transcribed.
+2. **ALLOW OBVIOUS ASR FACT CORRECTIONS**: You may fix clear speech-recognition errors when the sports context makes the intended phrase obvious, such as competition names, team names, venue names, common sports terms, tactics, formations, scores, numbers, or idioms.
+3. **NO SPECULATION**: If a correction is only a guess, keep the original wording.
 4. **STAY IN ORIGINAL LANGUAGE**: Do NOT translate. If input is English, output MUST be English.
 5. **FORMAT**: Keep [ID] prefix. One line per ID.
 6. **NO EXPLANATION**: Output ONLY the corrected lines.
@@ -121,9 +124,10 @@ Correct ASR errors (typos, punctuation) in the subtitles below.
 10. **MIXED LANGUAGE**: Preserve mixed-language tokens, technical terms, abbreviations (e.g. FIFA, CEO, km) and brand names as-is.
 11. **PUNCTUATION STRENGTH**: Keep the original tone (question/exclamation) if present.
 12. **NO CASE CHANGE**: Do NOT change capitalization of proper nouns or acronyms unless it is clearly a typo.
-13. **NO ADDITIONS**: Do NOT add words, explanations, or context that were not in the original.
+13. **NO NEW MEANING**: Do NOT add sentences, explanations, or context. Only replace obvious misheard words with the words that were clearly intended.
 14. **NO PUNCTUATION ADDITION**: Do NOT add sentence-ending punctuation (. ! ?) to segments that have none. Each segment may be a mid-sentence fragment from a longer utterance — adding a period would create false sentence boundaries. Only CORRECT existing punctuation (e.g. fix a misplaced comma), never INSERT new terminal punctuation.
 15. **LOW-CONFIDENCE IDS**: For IDs listed in Low confidence IDs, be EXTRA conservative: keep the original wording, do not complete fragments, do not smooth syntax, do not infer missing words, and prefer leaving awkward text unchanged unless the typo is obvious.
+16. **EXAMPLES OF ALLOWED SPORTS ASR FIXES**: "lombo to the channels" -> "long balls to the channels"; "the man of games" -> "the amount of games" or "the number of games"; "Eiffel Cup" -> "FA Cup" only if the surrounding context clearly indicates FA Cup; fix obvious competition, venue, rule, score, ranking, or tactical terms only when the context makes the intended term clear.
 
 # Context
 - Video: {context if context else "None"}

@@ -475,7 +475,11 @@ class LLMTranslator:
 
     @property
     def video_context(self):
-        return cfg.videoContext.value
+        try:
+            from app.core.context_enhancer import enhance_context
+            return enhance_context(cfg.videoContext.value, task_scope=self._task_scope)
+        except Exception:
+            return cfg.videoContext.value
 
     @property
     def model(self):
@@ -783,7 +787,8 @@ class LLMTranslator:
                        prev_context: str,
                        next_context: str,
                        target_lang_name: str = "Chinese",
-                       glossary: str = "") -> List[Dict[str, Any]]:
+                       glossary: str = "",
+                       semantic_context: str = "") -> List[Dict[str, Any]]:
         """翻译一个批次的字幕；可疑条目会自动拆小批并采用更保守策略。"""
         work_items = self._build_translation_work_items(batch_subtitles)
         if len(work_items) <= 1:
@@ -795,6 +800,7 @@ class LLMTranslator:
                 target_lang_name=target_lang_name,
                 glossary=glossary,
                 conservative=conservative,
+                semantic_context=semantic_context,
             )
             return self._stabilize_suspicious_translations(batch_subtitles, translated)
 
@@ -812,6 +818,7 @@ class LLMTranslator:
                     target_lang_name=target_lang_name,
                     glossary=glossary,
                     conservative=conservative,
+                    semantic_context=semantic_context,
                 )
             )
         return self._stabilize_suspicious_translations(batch_subtitles, merged_results)
@@ -824,6 +831,7 @@ class LLMTranslator:
         target_lang_name: str = "Chinese",
         glossary: str = "",
         conservative: bool = False,
+        semantic_context: str = "",
     ) -> List[Dict[str, Any]]:
         """
         翻译一个批次的字幕
@@ -885,6 +893,7 @@ class LLMTranslator:
 
 Translate [current_batch] into {target_lang_name}.
 Video Context: {self.video_context}
+Semantic Map: {semantic_context or "None"}
 {glossary_block}
 
 # Format
@@ -894,7 +903,8 @@ Video Context: {self.video_context}
 # Translation Rules
 1. Translate faithfully first, naturally second. Do not infer unstated meaning.
 2. Keep names, places, and terms consistent with context_before_translated.
-3. Keep each subtitle aligned to its own source line. Do NOT redistribute content across neighboring subtitles unless the source is explicitly unfinished and the meaning is obvious.{conservative_block}{target_lang_style}
+3. Keep each subtitle aligned to its own source line. Do NOT redistribute content across neighboring subtitles unless the source is explicitly unfinished and the meaning is obvious.
+4. Use the Semantic Map to resolve speaker turns, references, and topic flow. It is guidance only; never translate or copy text from the map as source content.{conservative_block}{target_lang_style}
 7. Preserve the original tone and punctuation rhythm. Sentence-ending punctuation (periods, question marks, exclamation marks, ellipses) in the source MUST appear in the translation. Never merge multiple sentences into one unpunctuated run-on.
 8. Low-confidence IDs: {suspicious_ids if suspicious_ids else "None"}.
 
@@ -906,6 +916,7 @@ Out: {{"translations":[{{"id":1,"cn":"嗨"}}]}}
 
 Translate [current_batch] into {target_lang_name}.
 Video Context: {self.video_context}
+Semantic Map: {semantic_context or "None"}
 {glossary_block}
 
 # Format
@@ -915,12 +926,14 @@ Video Context: {self.video_context}
 # Translation Rules
 1. Translate faithfully first, naturally second. Do not infer unstated meaning.
 2. Keep names, places, and terms consistent with previous translations.
-3. Keep each subtitle aligned to its own source line. Do NOT redistribute content across neighboring subtitles unless the source is explicitly unfinished and the meaning is obvious.{conservative_block}{target_lang_style}
+3. Keep each subtitle aligned to its own source line. Do NOT redistribute content across neighboring subtitles unless the source is explicitly unfinished and the meaning is obvious.
+4. Use the Semantic Map to resolve speaker turns, references, and topic flow. It is guidance only; never translate or copy text from the map as source content.{conservative_block}{target_lang_style}
 7. Preserve the original tone and punctuation rhythm. Sentence-ending punctuation in the source MUST appear in the translation. Never merge multiple sentences into one unpunctuated run-on.
 8. Low-confidence IDs: {suspicious_ids if suspicious_ids else "None"}.
 """
         user_payload = json.dumps({
             "context_before_translated": prev_context,
+            "semantic_map": semantic_context,
             "current_batch": current_batch_json,
             "context_after_source": next_context
         }, ensure_ascii=False)

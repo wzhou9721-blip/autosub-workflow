@@ -347,7 +347,7 @@ class RealtimeCaptureInterface(SmoothScrollArea):
                 border-radius: 5px;
             }
             QScrollBar::handle:vertical {
-                background: rgba(63, 162, 102, 0.85);
+                background: rgba(7, 193, 96, 0.85);
                 min-height: 36px;
                 border-radius: 5px;
             }
@@ -692,10 +692,10 @@ class RealtimeCaptureInterface(SmoothScrollArea):
     def _apply_item_style(self, job: SegmentJob, item: QListWidgetItem) -> None:
         widget = self.segment_widgets.get(job.segment_id)
         if job.status == "已完成":
-            item.setForeground(QBrush(QColor("#3FA266")))
-            item.setBackground(QBrush(QColor(63, 162, 102, 30)))
+            item.setForeground(QBrush(QColor("#07C160")))
+            item.setBackground(QBrush(QColor(7, 193, 96, 30)))
             if widget is not None:
-                widget.textLabel.setStyleSheet("color: #3FA266;")
+                widget.textLabel.setStyleSheet("color: #07C160;")
         else:
             item.setForeground(QBrush(QColor("#E6E9EF")))
             item.setBackground(QBrush(Qt.GlobalColor.transparent))

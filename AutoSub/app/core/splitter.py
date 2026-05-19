@@ -4,6 +4,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from app.common.config import cfg
 from app.common.runtime_state import SPLIT_RESUME_FILE, load_json_file, save_json_atomic, safe_unlink
 from app.common.utils import fix_timestamp_overlaps
+from app.core.context_enhancer import build_semantic_map, enhance_context
 from app.core.llm import llm_manager
 
 # 每批处理的 segment 数量上限（控制单次 LLM 请求的文本长度，避免长文本后半段质量下滑）
@@ -40,6 +41,9 @@ class SubtitleSplitter:
         """
         if not segments:
             return []
+
+        context = enhance_context(context, task_scope=task_scope)
+        semantic_map = build_semantic_map(segments, context, task_scope=task_scope)
 
         max_cjk = cfg.max_word_count_cjk.value
         max_en  = cfg.max_word_count_english.value
@@ -93,7 +97,7 @@ class SubtitleSplitter:
                 future_to_idx = {
                     executor.submit(
                         self._process_one_chunk,
-                        chunk_idx, chunk_segs, context, max_cjk, max_en, model, task_scope
+                        chunk_idx, chunk_segs, context, semantic_map, max_cjk, max_en, model, task_scope
                     ): chunk_idx
                     for chunk_idx, chunk_segs, _ in chunks_to_process
                 }
@@ -137,7 +141,7 @@ class SubtitleSplitter:
                 if progress_callback:
                     progress_callback(chunk_idx + 1, total_steps)
                 _, chunk_texts = self._process_one_chunk(
-                    chunk_idx, chunk_segs, context, max_cjk, max_en, model, task_scope
+                    chunk_idx, chunk_segs, context, semantic_map, max_cjk, max_en, model, task_scope
                 )
                 if chunk_idx > 0 and head_overlap > 0:
                     overlap_segs = chunks[chunk_idx - 1][0][-head_overlap:]
@@ -217,7 +221,7 @@ class SubtitleSplitter:
     # 分块辅助（单块处理，供并行 worker 调用；不做 overlap trim，由主线程按序合并时做）
     # ──────────────────────────────────────────────────────────────
 
-    def _process_one_chunk(self, chunk_idx, chunk_segs, context, max_cjk, max_en, model, task_scope=None):
+    def _process_one_chunk(self, chunk_idx, chunk_segs, context, semantic_map, max_cjk, max_en, model, task_scope=None):
         """处理单块：拼接文本、调用 LLM 断句、完整性校验。返回 (chunk_idx, chunk_texts)，不做 overlap trim。"""
         chunk_text = self._join_segment_texts(chunk_segs)
         if not chunk_text.strip():
@@ -230,9 +234,9 @@ class SubtitleSplitter:
             chunk_text_for_llm = self._strip_punctuation(chunk_text)
         else:
             chunk_text_for_llm = chunk_text
-        chunk_texts = self._split_chunk(chunk_text_for_llm, context, max_cjk, max_en, model, task_scope)
+        chunk_texts = self._split_chunk(chunk_text_for_llm, context, semantic_map, max_cjk, max_en, model, task_scope)
         if chunk_texts is None:
-            chunk_texts = self._split_chunk(chunk_text_for_llm, context, max_cjk, max_en, model, task_scope)
+            chunk_texts = self._split_chunk(chunk_text_for_llm, context, semantic_map, max_cjk, max_en, model, task_scope)
             if chunk_texts is None:
                 print(f"[Splitter] 第 {chunk_idx + 1} 块 LLM 断句失败（已重试一次），使用原始文本")
                 chunk_texts = [s.get('optimized_text', s.get('text', '')) for s in chunk_segs]
@@ -668,7 +672,7 @@ class SubtitleSplitter:
         # 极端情况：所有文本都不够 threshold，返回空列表
         return []
 
-    def _split_chunk(self, chunk_text, context, max_cjk, max_en, model, task_scope=None):
+    def _split_chunk(self, chunk_text, context, semantic_map, max_cjk, max_en, model, task_scope=None):
         """对单块文本调用 LLM 进行断句，返回 list[str] 或 None（失败时）。"""
 
         # 根据视频语境动态生成场景专属规则，避免把足球解说规则用在其他类型的视频上
@@ -707,7 +711,9 @@ class SubtitleSplitter:
 
 3. **Where to split**: At clause breaks, topic shifts, sentence endings. Do NOT isolate fragments (< 5 words / < 8 CJK chars) — merge them with adjacent text. Do NOT end a segment with a dangling connector (so, and, but, because, if, when, although, while, though). Never break fixed phrases, proper nouns, or named entities.
 
-4. **Output**: ONLY the text with <br> inserted. No explanation, no markdown, no numbering.
+4. **Semantic guidance**: Use the semantic map to recognize speaker turns, questions, answers, explanations, and references. Prefer boundaries at real turn/topic changes. Keep short answers, follow-up clauses, and pronoun references with the line they depend on when the length limit allows.
+
+5. **Output**: ONLY the text with <br> inserted. No explanation, no markdown, no numbering.
 {scene_rules}
 </instructions>
 
@@ -719,6 +725,11 @@ Output: The committee has decided to postpone the vote until next Monday<br>beca
         user_prompt = f"Segment this text:\n{chunk_text}"
         if context:
             user_prompt = f"Video context: {context}\n\n{user_prompt}"
+        if semantic_map:
+            user_prompt = (
+                f"Semantic structure map (use as guidance; do not copy it):\n"
+                f"{semantic_map}\n\n{user_prompt}"
+            )
 
         # 动态估算 max_tokens：
         # 中文每个字约 1 token，加上 <br> 标记开销需要 * 2.5
@@ -1371,16 +1382,26 @@ STRICT RULES:
             next_origin  = next_seg.get("origin_idx")
 
             # 跨原始 segment 边界不合并（避免破坏时间轴结构）
-            # 例外1：后一段是碎片（< 1.5s 且 < 5词/8字）→ 并入前段（最常见情况）
-            # 例外2：两段都是极短碎片 → 允许跨界合并
+            # 例外1：任一侧是碎片（< 1.5s 且 < 5词/8字）→ 继续走后续合并判断
+            # 例外2：前一段碎片若已有句末标点，视为完整短句，不向后救援
             if curr_origin is not None and next_origin is not None and curr_origin != next_origin:
+                curr_dur  = curr.get("end", 0) - curr.get("start", 0)
                 next_dur  = next_seg.get("end", 0) - next_seg.get("start", 0)
+                is_en_c   = self._is_latin(curr["text"])
                 is_en_n   = self._is_latin(next_seg["text"])
+                curr_tiny = curr_dur < 1.5 and (
+                    len(re.findall(r'\w+', curr["text"])) < 5 if is_en_c
+                    else len(curr["text"]) < 8
+                )
+                curr_tiny = curr_tiny and not re.search(
+                    r'[.!?\u3002\uff01\uff1f]["\')\]]*$',
+                    curr["text"].strip(),
+                )
                 next_tiny = next_dur < 1.5 and (
                     len(re.findall(r'\w+', next_seg["text"])) < 5 if is_en_n
                     else len(next_seg["text"]) < 8
                 )
-                if not next_tiny:
+                if not (curr_tiny or next_tiny):
                     merged.append(curr)
                     i += 1
                     continue

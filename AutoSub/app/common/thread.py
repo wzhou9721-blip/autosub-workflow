@@ -49,6 +49,7 @@ from app.common.runtime_state import (
 )
 from app.common.text_utils import TextSplitter, clean_punctuation_text
 from app.common.utils import fix_timestamp_overlaps
+from app.core.context_enhancer import build_semantic_map
 
 try:
     from modelscope.hub.callback import ProgressCallback
@@ -552,6 +553,7 @@ class BatchTranscriptionThread(QThread):
         target_lang: str,
         glossary: str,
         batch_number: int,
+        semantic_context: str = "",
         max_attempts: int = 2,
     ) -> tuple[bool, Exception | None, int]:
         retry_count = 0
@@ -565,6 +567,7 @@ class BatchTranscriptionThread(QThread):
                     next_context=next_ctx,
                     target_lang_name=target_lang,
                     glossary=glossary,
+                    semantic_context=semantic_context,
                 )
                 self._apply_translation_result(batch, result)
                 return True, None, retry_count
@@ -985,6 +988,11 @@ class BatchTranscriptionThread(QThread):
                         translator = LLMTranslator(task_scope=self._task_scope)
                         batch_size = cfg.llm_batch_size.value
                         n_segs = len(segments)
+                        semantic_map = build_semantic_map(
+                            segments,
+                            context,
+                            task_scope=self._task_scope,
+                        )
                         translation_summary["total_batches"] = (n_segs + batch_size - 1) // batch_size
 
                         # _translate_resume 已在步骤 0 中计算好
@@ -1021,6 +1029,7 @@ class BatchTranscriptionThread(QThread):
                                 target_lang=target_lang,
                                 glossary=glossary,
                                 batch_number=bi // batch_size + 1,
+                                semantic_context=semantic_map,
                             )
                             retryable_retry_count += retries_used
 

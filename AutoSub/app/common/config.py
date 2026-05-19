@@ -179,6 +179,11 @@ class Config(QConfig):
     optimize_base_url = ConfigItem("Optimize", "BaseUrl", "", restart=False)
     optimize_model = ConfigItem("Optimize", "Model", "", restart=False)
 
+    # Context Enhancement API
+    context_api_key = ConfigItem("Context", "ApiKey", "", restart=False)
+    context_base_url = ConfigItem("Context", "BaseUrl", "", restart=False)
+    context_model = ConfigItem("Context", "Model", "", restart=False)
+
     # Search API (Tavily/Serper for knowledge enhancement)
     search_provider = OptionsConfigItem(
         "Search", 

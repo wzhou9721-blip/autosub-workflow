@@ -52,7 +52,7 @@ class FileDropWidget(QFrame):
         # 图标（默认柔和灰色，有文件后变绿色）
         self.iconWidget = _TintedIconWidget(FIF.FOLDER, self)
         self.iconWidget.setFixedSize(48, 48)
-        self.iconWidget.setTintColor(QColor("#6B7280"))  # 默认柔和灰
+        self.iconWidget.setTintColor(QColor("#8A8F96"))  # 默认柔和灰
         
         self.defaultTitle = "拖拽文件到此处"
         self.defaultSubTitle = "支持视频和音频文件，或点击此处选择"
@@ -76,9 +76,9 @@ class FileDropWidget(QFrame):
 
         # 有文件时用绿色边框，否则用灰色
         if self._has_file:
-            color = QColor(63, 162, 102)   # #3FA266 绿色
+            color = QColor("#07C160")      # 微信绿
         else:
-            color = QColor(120, 120, 120)  # 默认灰色
+            color = QColor("#4B4D50")      # 默认灰色
 
         pen = QPen(color)
         pen.setWidth(2)
@@ -110,13 +110,13 @@ class FileDropWidget(QFrame):
         self.titleLabel.setText(title)
         self.subTitleLabel.setText(subtitle)
         self._has_file = True
-        self.iconWidget.setTintColor(QColor("#3FA266"))  # 有文件 → 主题绿色
+        self.iconWidget.setTintColor(QColor("#07C160"))  # 有文件 → 主题绿色
         self.update()
 
     def resetHint(self):
         self.setHint(self.defaultTitle, self.defaultSubTitle)
         self._has_file = False
-        self.iconWidget.setTintColor(QColor("#6B7280"))  # 恢复柔和灰
+        self.iconWidget.setTintColor(QColor("#8A8F96"))  # 恢复柔和灰
         self.update()
 
     def mousePressEvent(self, event):

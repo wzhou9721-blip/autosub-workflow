@@ -319,6 +319,45 @@ class SettingInterface(SmoothScrollArea):
         self._addCollapsibleGroup("翻译设置", self.llmGroup)
 
         # 3. 优化+断句设置
+        self.contextGroup = SettingCardGroup("", self.scrollWidget)
+
+        self.contextKeyCard = PasswordSettingCard(
+            cfg.context_api_key,
+            FIF.VPN,
+            "API Key",
+            "请输入语境增强 API 密钥；可单独接入思考模型",
+            self.contextGroup
+        )
+        self.contextUrlCard = LineEditSettingCard(
+            cfg.context_base_url,
+            FIF.LINK,
+            "Base URL",
+            "请输入语境增强 API 地址",
+            self.contextGroup
+        )
+        self.contextModelCard = LineEditSettingCard(
+            cfg.context_model,
+            FIF.EDUCATION,
+            "Model Name",
+            "请输入语境增强模型名称；适合使用推理/思考模型",
+            self.contextGroup
+        )
+        self.contextGroup.addSettingCard(self.contextKeyCard)
+        self.contextGroup.addSettingCard(self.contextUrlCard)
+        self.contextGroup.addSettingCard(self.contextModelCard)
+
+        self.contextTestCard = PushSettingCard(
+            "测试连接",
+            FIF.SEND,
+            "测试语境增强 API 配置",
+            "测试当前语境增强 API 是否能正常连接并测量延迟",
+            self.contextGroup
+        )
+        self.contextTestCard.clicked.connect(lambda: self._onTestConnection("context"))
+        self.contextGroup.addSettingCard(self.contextTestCard)
+
+        self._addCollapsibleGroup("语境增强设置", self.contextGroup)
+
         self.optimizeGroup = SettingCardGroup("", self.scrollWidget)
         
         self.optimizeKeyCard = PasswordSettingCard(

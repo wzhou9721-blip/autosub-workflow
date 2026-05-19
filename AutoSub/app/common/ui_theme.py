@@ -2,38 +2,46 @@ from __future__ import annotations
 
 from typing import Dict
 
-DUO_COLORS: Dict[str, str] = {
-    "primary": "#3FA266",
-    "primary_pressed": "#368C58",
-    "primary_soft": "#E2F0E8",
-    "info": "#1CB0F6",
-    "info_soft": "#E7F7FF",
-    "warning": "#FFC800",
-    "warning_soft": "#FFF7D6",
-    "danger": "#FF4B4B",
-    "danger_soft": "#FFE7E7",
-    "bg": "#F7F9F4",
-    "surface": "#FFFFFF",
-    "surface_alt": "#F1F6E9",
-    "border": "#D9E5CC",
-    "text": "#2B2D31",
-    "text_secondary": "#667085",
-    "text_on_primary": "#FFFFFF",
+WECHAT_COLORS: Dict[str, str] = {
+    "primary": "#07C160",
+    "primary_hover": "#14D36D",
+    "primary_pressed": "#05A850",
+    "primary_soft": "#123C2B",
+    "info": "#5AA7FF",
+    "info_soft": "#1F2C3A",
+    "warning": "#D8A338",
+    "warning_soft": "#3C311D",
+    "danger": "#FA5151",
+    "danger_soft": "#3D2424",
+    "bg": "#1A1A1C",
+    "surface": "#2B2C2F",
+    "surface_alt": "#363739",
+    "surface_hover": "#414244",
+    "border": "#3A3B3D",
+    "border_strong": "#4B4D50",
+    "text": "#EDEDED",
+    "text_secondary": "#A7A9AD",
+    "text_muted": "#7F8389",
+    "text_on_primary": "#07140C",
 }
+
+# Backwards-compatible alias for older imports while the visual system moves
+# from the previous Duolingo-inspired palette to the WeChat dark palette.
+DUO_COLORS = WECHAT_COLORS
 
 
 def duo_primary_button_style() -> str:
     return f"""
 PrimaryPushButton {{
     background-color: {DUO_COLORS['primary']};
-    border: 1px solid {DUO_COLORS['primary_pressed']};
-    border-radius: 14px;
+    border: 1px solid {DUO_COLORS['primary']};
+    border-radius: 6px;
     color: {DUO_COLORS['text_on_primary']};
-    font-weight: 700;
+    font-weight: 600;
     padding: 7px 18px;
 }}
 PrimaryPushButton:hover {{
-    background-color: #56B379;
+    background-color: {DUO_COLORS['primary_hover']};
     border-color: {DUO_COLORS['primary']};
 }}
 PrimaryPushButton:pressed {{
@@ -41,9 +49,9 @@ PrimaryPushButton:pressed {{
     border-color: {DUO_COLORS['primary_pressed']};
 }}
 PrimaryPushButton:disabled {{
-    background-color: #9FCFB2;
-    border-color: #9FCFB2;
-    color: #F5FAEF;
+    background-color: #2A2C2E;
+    border-color: #303236;
+    color: #60646A;
 }}
 """
 
@@ -53,28 +61,28 @@ def duo_secondary_button_style() -> str:
 PushButton {{
     background-color: {DUO_COLORS['surface']};
     border: 1px solid {DUO_COLORS['border']};
-    border-radius: 14px;
+    border-radius: 6px;
     color: {DUO_COLORS['text']};
-    font-weight: 600;
+    font-weight: 500;
     padding: 7px 16px;
 }}
 PushButton:hover {{
-    background-color: {DUO_COLORS['surface_alt']};
-    border-color: #C7D8B3;
+    background-color: {DUO_COLORS['surface_hover']};
+    border-color: {DUO_COLORS['border_strong']};
 }}
 PushButton:pressed {{
-    background-color: #E8F2DD;
-    border-color: #B7CBA0;
+    background-color: #252629;
+    border-color: #323438;
 }}
 PushButton:disabled {{
-    color: #A6B49A;
-    border-color: #DFE8D5;
+    color: #5A5E64;
+    border-color: #303236;
 }}
 """
 
 
 def duo_page_style(root_selector: str) -> str:
-    """Build unified static Duolingo-like page style."""
+    """Build unified static WeChat-like dark page style."""
     return f"""
 {root_selector} {{
     background-color: {DUO_COLORS['bg']};
@@ -104,7 +112,7 @@ def duo_page_style(root_selector: str) -> str:
 {root_selector} SettingCardGroup {{
     background-color: {DUO_COLORS['surface']};
     border: 1px solid {DUO_COLORS['border']};
-    border-radius: 18px;
+    border-radius: 8px;
 }}
 {root_selector} QLineEdit,
 {root_selector} LineEdit,
@@ -115,9 +123,10 @@ def duo_page_style(root_selector: str) -> str:
 {root_selector} DoubleSpinBox {{
     background-color: {DUO_COLORS['surface']};
     border: 1px solid {DUO_COLORS['border']};
-    border-radius: 12px;
+    border-radius: 6px;
     color: {DUO_COLORS['text']};
-    selection-background-color: {DUO_COLORS['info']};
+    selection-background-color: {DUO_COLORS['primary']};
+    selection-color: {DUO_COLORS['text_on_primary']};
 }}
 {root_selector} QLineEdit:focus,
 {root_selector} QTextEdit:focus,
@@ -130,8 +139,8 @@ def duo_page_style(root_selector: str) -> str:
 {root_selector} QTableView {{
     background-color: {DUO_COLORS['surface']};
     border: 1px solid {DUO_COLORS['border']};
-    border-radius: 14px;
-    gridline-color: #E7EEDC;
+    border-radius: 8px;
+    gridline-color: {DUO_COLORS['border']};
 }}
 {root_selector} QHeaderView::section {{
     background-color: {DUO_COLORS['surface_alt']};
@@ -141,8 +150,8 @@ def duo_page_style(root_selector: str) -> str:
     padding: 8px 10px;
 }}
 {root_selector} ProgressBar {{
-    border-radius: 6px;
-    background-color: #E5EDD9;
+    border-radius: 4px;
+    background-color: #303236;
 }}
 """
 
@@ -150,9 +159,9 @@ def duo_page_style(root_selector: str) -> str:
 def duo_badge_style(kind: str = "info") -> str:
     color_map = {
         "info": (DUO_COLORS["info"], DUO_COLORS["info_soft"]),
-        "warning": ("#B87900", DUO_COLORS["warning_soft"]),
-        "danger": ("#C63838", DUO_COLORS["danger_soft"]),
-        "success": ("#3A8E5A", DUO_COLORS["primary_soft"]),
+        "warning": (DUO_COLORS["warning"], DUO_COLORS["warning_soft"]),
+        "danger": (DUO_COLORS["danger"], DUO_COLORS["danger_soft"]),
+        "success": (DUO_COLORS["primary"], DUO_COLORS["primary_soft"]),
     }
     fg, bg = color_map.get(kind, (DUO_COLORS["text_secondary"], DUO_COLORS["surface_alt"]))
     return f"""
@@ -180,10 +189,10 @@ NavigationWidget {{
     border-radius: 12px;
 }}
 NavigationWidget:hover {{
-    background-color: {DUO_COLORS['surface_alt']};
+    background-color: {DUO_COLORS['surface_hover']};
 }}
 NavigationWidget[isSelected='true'] {{
-    background-color: {DUO_COLORS['primary_soft']};
+    background-color: {DUO_COLORS['primary']};
 }}
 QStackedWidget {{
     background-color: transparent;
@@ -192,7 +201,7 @@ QStackedWidget {{
 
 
 def apply_duolingo_global_style(app) -> None:
-    """Apply global static palette tokens to QApplication."""
+    """Apply global static WeChat-like palette tokens to QApplication."""
     app.setStyleSheet(
         f"""
 QWidget {{

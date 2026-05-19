@@ -38,6 +38,7 @@ class FileItemWidget(CardWidget):
     def __init__(self, file_path, src_lang=None, tgt_lang=None, parent=None):
         super().__init__(parent)
         self.file_path = file_path
+        self._langControlsVisible = True
 
         _src = src_lang or cfg.sourceLanguage.value
         _tgt = tgt_lang or cfg.targetLanguage.value
@@ -108,7 +109,7 @@ class FileItemWidget(CardWidget):
         self._onMultiToggled(self.multiBtn.isChecked())
 
     def _onMultiToggled(self, checked: bool):
-        self.secLangCombo.setVisible(checked)
+        self.secLangCombo.setVisible(self._langControlsVisible and self.multiBtn.isEnabled() and checked)
 
     def setMultilingualAvailable(self, available: bool, reason: str = ""):
         self.multiBtn.setEnabled(available)
@@ -116,10 +117,11 @@ class FileItemWidget(CardWidget):
         tooltip = reason or "多语言模式：开启后可为空白区间补录指定次要语言"
         self.multiBtn.setToolTip(tooltip)
         self.secLangCombo.setToolTip(tooltip if not available else "次要语言（空白区间补录时优先使用）")
-        self.secLangCombo.setVisible(available and self.multiBtn.isChecked())
+        self.secLangCombo.setVisible(self._langControlsVisible and available and self.multiBtn.isChecked())
 
     def setLangControlsVisible(self, visible: bool):
         """单文件时隐藏条目语言控件，多文件时显示。"""
+        self._langControlsVisible = visible
         self.srcLangCombo.setVisible(visible)
         self.arrowLabel.setVisible(visible)
         self.tgtLangCombo.setVisible(visible)

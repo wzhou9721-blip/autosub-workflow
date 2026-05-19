@@ -151,7 +151,7 @@ def apply_label_color_patch():
         from PyQt6.QtGui import QColor
         from qfluentwidgets.components.widgets.label import FluentLabelBase
 
-        _SOFT_WHITE = QColor("#9BA1AB")  # 替代纯白
+        _SOFT_WHITE = QColor("#D7D7D7")  # 替代纯白
 
         _orig_setTextColor = FluentLabelBase.setTextColor
 
@@ -168,19 +168,16 @@ def apply_label_color_patch():
 
 
 def apply_primary_button_icon_patch():
-    """Monkey-patch PrimaryPushButton._drawIcon，让图标在暗色背景下使用浅色。
-    框架默认假设 PrimaryPushButton 背景是亮色（主题色），所以用暗色图标。
-    我们把背景改成了深灰，所以图标应该用浅色（Theme.DARK）。
-    """
+    """Monkey-patch PrimaryPushButton._drawIcon，让图标适配微信绿主按钮。"""
     try:
         from qfluentwidgets.components.widgets.button import PrimaryPushButton, PushButton
-        from qfluentwidgets.common.icon import FluentIconBase, isDarkTheme, Theme
+        from qfluentwidgets.common.icon import FluentIconBase, Theme
         from PyQt6.QtGui import QIcon
 
         def _patched_drawIcon(self, icon, painter, rect, state=QIcon.State.Off):
             if isinstance(icon, FluentIconBase) and self.isEnabled():
-                # 暗色模式下用浅色图标（Theme.DARK = 白色图标）
-                icon = icon.icon(Theme.DARK if isDarkTheme() else Theme.LIGHT)
+                # 微信绿按钮较亮，使用深色图标保证与文字一致。
+                icon = icon.icon(Theme.LIGHT)
             elif not self.isEnabled():
                 painter.setOpacity(0.4)
                 if isinstance(icon, FluentIconBase):
@@ -230,45 +227,61 @@ def apply_qss_override_patch():
         import qfluentwidgets.common.style_sheet as ss_mod
 
         _OVERRIDE_QSS = """
-/* ── 需要灰色背景的按钮（不包含 Transparent* / ToolButton / SegmentedItem） ── */
-PrimaryPushButton,
+/* ── 微信暗色次级按钮（不包含 Transparent* / ToolButton / SegmentedItem） ── */
 PushButton,
 QPushButton,
-QPushButton#primaryButton,
-DropDownPushButton,
-PrimaryDropDownPushButton {
-    background-color: #3A3A3A;
-    border: 1px solid #505050;
-    color: #D0D4DC;
+DropDownPushButton {
+    background-color: #2F3033;
+    border: 1px solid #3D3F43;
+    color: #DADDE1;
     border-radius: 6px;
 }
-PrimaryPushButton:hover,
 PushButton:hover,
 QPushButton:hover,
-QPushButton#primaryButton:hover,
-DropDownPushButton:hover,
-PrimaryDropDownPushButton:hover {
-    background-color: #454545;
-    border-color: #606060;
+DropDownPushButton:hover {
+    background-color: #383A3D;
+    border-color: #4B4D50;
 }
-PrimaryPushButton:pressed,
 PushButton:pressed,
 QPushButton:pressed,
-QPushButton#primaryButton:pressed,
-DropDownPushButton:pressed,
-PrimaryDropDownPushButton:pressed {
-    background-color: #2E2E2E;
-    border-color: #404040;
+DropDownPushButton:pressed {
+    background-color: #282A2D;
+    border-color: #35373B;
 }
-PrimaryPushButton:disabled,
 PushButton:disabled,
 QPushButton:disabled,
+DropDownPushButton:disabled {
+    background-color: #242527;
+    border-color: #2D2F32;
+    color: #5A5E64;
+}
+/* ── 微信绿主按钮：放在次级按钮后面，覆盖 QPushButton 继承样式 ── */
+PrimaryPushButton,
+QPushButton#primaryButton,
+PrimaryDropDownPushButton {
+    background-color: #07C160;
+    border: 1px solid #07C160;
+    color: #07140C;
+    font-weight: 600;
+}
+PrimaryPushButton:hover,
+QPushButton#primaryButton:hover,
+PrimaryDropDownPushButton:hover {
+    background-color: #14D36D;
+    border-color: #14D36D;
+}
+PrimaryPushButton:pressed,
+QPushButton#primaryButton:pressed,
+PrimaryDropDownPushButton:pressed {
+    background-color: #05A850;
+    border-color: #05A850;
+}
+PrimaryPushButton:disabled,
 QPushButton#primaryButton:disabled,
-DropDownPushButton:disabled,
 PrimaryDropDownPushButton:disabled {
-    background-color: #252525;
-    border-color: #333333;
-    color: #484848;
+    background-color: #242527;
+    border-color: #2D2F32;
+    color: #5A5E64;
 }
 /* ── SegmentedWidget / PivotItem 恢复透明，不受 PushButton 规则影响 ── */
 SegmentedItem,
@@ -289,13 +302,13 @@ SegmentedToolWidget {
 }
 /* ── SettingCard 内部文字颜色柔和化 ── */
 SettingCard QLabel {
-    color: #9BA1AB;
+    color: #C7C9CC;
 }
 SettingCard QLabel#contentLabel {
-    color: #6B7280;
+    color: #8F949B;
 }
 SettingCardGroup QLabel {
-    color: #9BA1AB;
+    color: #C7C9CC;
 }
 """
 
@@ -311,29 +324,29 @@ SettingCardGroup QLabel {
 
 
 def apply_pro_gray_black_style(app: QApplication):
-    """全局高级灰黑风格：仅保留按钮形态，其余矩形容器弱化为无边框"""
+    """全局微信暗色风格：低饱和黑灰分层 + 微信绿强调色"""
     app.setStyleSheet("""
 FluentWindow {
-    background-color: #121212;
-    border: 1px solid #505050;
+    background-color: #1A1A1C;
+    border: 1px solid #3A3B3D;
 }
 
 FluentTitleBar, TitleBar, TitleBarBase {
-    background-color: #1A1A1A;
+    background-color: #252527;
 }
 
 QStackedWidget, QScrollArea, QWidget#scrollWidget {
-    background-color: #121212;
+    background-color: #1A1A1C;
     border: none;
 }
 
 QWidget {
-    color: #8A9099;
+    color: #A7A9AD;
 }
 
 NavigationInterface {
-    background-color: #121212;
-    border-right: none;
+    background-color: #252527;
+    border-right: 1px solid #343536;
 }
 
 NavigationWidget {
@@ -343,12 +356,12 @@ NavigationWidget {
 }
 
 NavigationWidget:hover {
-    background-color: transparent;
+    background-color: #2F3033;
 }
 
 NavigationWidget[isSelected='true'] {
-    background-color: transparent;
-    border-left: 2px solid #3FA266;
+    background-color: #303134;
+    border-left: 2px solid #07C160;
 }
 
 CardWidget, SettingCard, SettingCardGroup,
@@ -358,22 +371,24 @@ ProgressBar, QToolTip {
     background-color: transparent;
     border: none;
     border-radius: 0px;
-    color: #8A9099;
+    color: #A7A9AD;
 }
 
 QLineEdit, QTextEdit, QPlainTextEdit,
 LineEdit, TextEdit,
 ComboBox, SpinBox, DoubleSpinBox {
-    background-color: #171717;
-    border: 1px solid #2E3238;
-    border-radius: 0px;
-    color: #B8BDC6;
+    background-color: #1D1E20;
+    border: 1px solid #3A3B3D;
+    border-radius: 6px;
+    color: #EDEDED;
+    selection-background-color: #07C160;
+    selection-color: #07140C;
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus,
 LineEdit:focus, TextEdit:focus,
 ComboBox:focus, SpinBox:focus, DoubleSpinBox:focus {
-    border: 1px solid #3A4048;
+    border: 1px solid #07C160;
 }
 
 SettingCard, CardWidget {
@@ -388,25 +403,48 @@ QHeaderView::section {
 PrimaryPushButton, PushButton, QPushButton,
 DropDownPushButton, PrimaryDropDownPushButton {
     border-radius: 6px;
-    background-color: #3A3A3A;
-    border: 1px solid #505050;
-    color: #D0D4DC;
 }
-PrimaryPushButton:hover, PushButton:hover, QPushButton:hover,
-DropDownPushButton:hover, PrimaryDropDownPushButton:hover {
-    background-color: #454545;
-    border-color: #606060;
+PushButton, QPushButton, DropDownPushButton {
+    background-color: #2F3033;
+    border: 1px solid #3D3F43;
+    color: #DADDE1;
 }
-PrimaryPushButton:pressed, PushButton:pressed, QPushButton:pressed,
-DropDownPushButton:pressed, PrimaryDropDownPushButton:pressed {
-    background-color: #2E2E2E;
-    border-color: #404040;
+PushButton:hover, QPushButton:hover, DropDownPushButton:hover {
+    background-color: #383A3D;
+    border-color: #4B4D50;
+}
+PushButton:pressed, QPushButton:pressed, DropDownPushButton:pressed {
+    background-color: #282A2D;
+    border-color: #35373B;
 }
 PrimaryPushButton:disabled, PushButton:disabled, QPushButton:disabled,
 DropDownPushButton:disabled, PrimaryDropDownPushButton:disabled {
-    background-color: #252525;
-    border-color: #333333;
-    color: #484848;
+    background-color: #242527;
+    border-color: #2D2F32;
+    color: #5A5E64;
+}
+/* 主按钮放在次级按钮后面，覆盖 QPushButton 继承样式 */
+PrimaryPushButton, QPushButton#primaryButton, PrimaryDropDownPushButton {
+    background-color: #07C160;
+    border: 1px solid #07C160;
+    color: #07140C;
+    font-weight: 600;
+}
+PrimaryPushButton:hover, QPushButton#primaryButton:hover,
+PrimaryDropDownPushButton:hover {
+    background-color: #14D36D;
+    border-color: #14D36D;
+}
+PrimaryPushButton:pressed, QPushButton#primaryButton:pressed,
+PrimaryDropDownPushButton:pressed {
+    background-color: #05A850;
+    border-color: #05A850;
+}
+PrimaryPushButton:disabled, QPushButton#primaryButton:disabled,
+PrimaryDropDownPushButton:disabled {
+    background-color: #242527;
+    border-color: #2D2F32;
+    color: #5A5E64;
 }
 """)
 
@@ -432,13 +470,13 @@ if __name__ == '__main__':
     # Force Dark Theme by default
     setTheme(Theme.DARK)
     apply_theme_color_brightness_patch()
-    setThemeColor(QColor("#3FA266"))
+    setThemeColor(QColor("#07C160"))
     apply_flat_no_rectangle_patch()
     apply_switch_textless_patch()
     apply_pro_gray_black_style(app)
 
     w = MainWindow()
     w.setMicaEffectEnabled(False)
-    w.setCustomBackgroundColor("#121212", "#121212")
+    w.setCustomBackgroundColor("#1A1A1C", "#1A1A1C")
     w.show()
     sys.exit(app.exec())
