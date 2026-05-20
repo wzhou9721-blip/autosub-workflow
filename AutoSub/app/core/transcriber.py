@@ -7,7 +7,10 @@ from app.common.cuda_setup import setup_cuda_paths
 # 在导入 faster_whisper 之前设置 CUDA DLL 路径
 setup_cuda_paths()
 
-from faster_whisper import WhisperModel
+try:
+    from faster_whisper import WhisperModel
+except ImportError:
+    WhisperModel = None
 from app.common.utils import extract_audio, fix_timestamp_overlaps
 from app.common.config import cfg, MODEL_PATH
 from app.core.project import project_manager
@@ -54,6 +57,11 @@ class Transcriber:
             self.current_device = None
 
         if self.model is None:
+            if WhisperModel is None:
+                raise RuntimeError(
+                    "当前版本未安装本地转录组件，无法使用本地 Whisper 转录。\n"
+                    "请切换到「云端」转录模式，或下载 Full 版本 / 安装本地转录组件后重试。"
+                )
             print(f"[Transcriber] 正在加载模型: {model_size} ({device})...")
             model_path = MODEL_PATH / f"faster-whisper-{model_size}"
             
