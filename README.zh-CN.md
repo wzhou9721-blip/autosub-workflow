@@ -20,6 +20,8 @@ AutoSub Workflow 是一款面向短视频、体育剪辑、访谈和多语言内
 - **一站式导出**：导出 SRT、VTT、ASS、新闻稿和质量报告。
 - **实时捕获工作流**：支持系统音频捕获场景，方便直播、会议或长素材拆段处理。
 
+![AutoSub 实时字幕工作区](AutoSub/docs/screenshots/autosub-realtime.png)
+
 ![AutoSub 翻译与溢出修复界面](AutoSub/docs/screenshots/autosub-translate.png)
 
 ## 下载哪个版本

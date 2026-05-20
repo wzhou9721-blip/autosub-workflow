@@ -20,6 +20,8 @@ Subtitle production often breaks across too many tools: one app for transcriptio
 - **Export-ready outputs** including SRT, VTT, ASS, production notes, reports, and logs.
 - **Realtime capture support** for system-audio capture scenarios.
 
+![AutoSub realtime subtitle workspace](AutoSub/docs/screenshots/autosub-realtime.png)
+
 ![AutoSub translation and overflow repair screen](AutoSub/docs/screenshots/autosub-translate.png)
 
 ## Releases
