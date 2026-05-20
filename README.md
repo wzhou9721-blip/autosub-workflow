@@ -4,8 +4,6 @@ English | [中文](README.zh-CN.md)
 
 AutoSub Workflow is a desktop subtitle production workbench for creators who need more than a raw transcript. It connects transcription, cleanup, semantic splitting, translation, overflow repair, and export into one repeatable workflow.
 
-![AutoSub task setup screen](AutoSub/docs/screenshots/autosub-task.png)
-
 ## Why It Exists
 
 Subtitle production often breaks across too many tools: one app for transcription, another prompt for cleanup, another pass for translation, and a final manual check for lines that overflow in the editor. AutoSub brings those steps into a single desktop flow so a video can move from source media to deliverable subtitle files with less hand stitching.
@@ -19,10 +17,6 @@ Subtitle production often breaks across too many tools: one app for transcriptio
 - **Overflow repair** for subtitle boxes used in editing workflows.
 - **Export-ready outputs** including SRT, VTT, ASS, production notes, reports, and logs.
 - **Realtime capture support** for system-audio capture scenarios.
-
-![AutoSub realtime subtitle workspace](AutoSub/docs/screenshots/autosub-realtime.png)
-
-![AutoSub translation and overflow repair screen](AutoSub/docs/screenshots/autosub-translate.png)
 
 ## Releases
 
@@ -56,7 +50,6 @@ AutoSub/
   AutoSub_cloud_lite.spec Cloud Lite build configuration
   requirements.txt        Windows/dev dependencies
   config.example.json     Safe example config without API keys
-  docs/screenshots/       Project screenshots
   启动.bat                Windows launcher
 ```
 

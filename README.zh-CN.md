@@ -4,8 +4,6 @@
 
 AutoSub Workflow 是一款面向短视频、体育剪辑、访谈和多语言内容生产的桌面字幕工作台。它把“转录、清理、断句、翻译、溢出修复、导出”串成一个完整流程，让字幕不再散落在脚本、网页和临时文件之间。
 
-![AutoSub 设置任务界面](AutoSub/docs/screenshots/autosub-task.png)
-
 ## 为什么做它
 
 很多字幕工具只解决其中一步：转录很快，但断句粗糙；翻译能跑，但字幕会溢出；导出有文件，却缺少过程记录。AutoSub 的目标是把字幕生产变成一个可复用的工作流：导入素材，配置语言和模型，运行任务，检查结果，最后导出能直接交付的字幕文件和报告。
@@ -19,10 +17,6 @@ AutoSub Workflow 是一款面向短视频、体育剪辑、访谈和多语言内
 - **溢出修复**：面向剪辑软件字幕框，自动检查并修复过长字幕。
 - **一站式导出**：导出 SRT、VTT、ASS、新闻稿和质量报告。
 - **实时捕获工作流**：支持系统音频捕获场景，方便直播、会议或长素材拆段处理。
-
-![AutoSub 实时字幕工作区](AutoSub/docs/screenshots/autosub-realtime.png)
-
-![AutoSub 翻译与溢出修复界面](AutoSub/docs/screenshots/autosub-translate.png)
 
 ## 下载哪个版本
 
@@ -56,7 +50,6 @@ AutoSub/
   AutoSub_cloud_lite.spec Cloud Lite 版打包配置
   requirements.txt        Windows / 开发环境依赖
   config.example.json     不含密钥的示例配置
-  docs/screenshots/       项目截图
   启动.bat                Windows 一键启动脚本
 ```
 
