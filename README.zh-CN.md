@@ -1,26 +1,70 @@
-# AutoSub Workflow
+<p align="center">
+  <img src="AutoSub/logo.ico" alt="AutoSub Logo" width="96">
+</p>
 
-[English](README.md) | 中文
+<h1 align="center">AutoSub Workflow</h1>
 
-AutoSub Workflow 是一款面向短视频、体育剪辑、访谈和多语言内容生产的桌面字幕工作台。它把“转录、清理、断句、翻译、溢出修复、导出”串成一个完整流程，让字幕不再散落在脚本、网页和临时文件之间。
+<p align="center">
+  面向创作者的智能字幕工作流工具：转录、断句、翻译、溢出修复与导出，一条流程跑完。
+</p>
 
-## 为什么做它
+<p align="center">
+  <a href="README.md">English</a> · 中文 ·
+  <a href="https://github.com/wzhou9721-blip/autosub-workflow/releases/tag/v1.0.0-cloud-lite">下载 Cloud Lite</a> ·
+  <a href="https://github.com/wzhou9721-blip/autosub-workflow/releases/tag/v1.0.0">下载 Full</a>
+</p>
 
-很多字幕工具只解决其中一步：转录很快，但断句粗糙；翻译能跑，但字幕会溢出；导出有文件，却缺少过程记录。AutoSub 的目标是把字幕生产变成一个可复用的工作流：导入素材，配置语言和模型，运行任务，检查结果，最后导出能直接交付的字幕文件和报告。
+![AutoSub 项目封面](AutoSub/docs/screenshots/cover.png)
 
-## 主要能力
+## 项目介绍
 
-- **云端 / 本地转录**：支持 Gladia、Whisper 兼容接口，以及本地 faster-whisper 工作流。
-- **AI 初始优化**：清理转录噪声，减少幻觉片段、重复片段和不自然标点。
-- **智能语义断句**：按语义、停顿和长度限制重组字幕，让观众更容易读。
-- **上下文翻译**：结合视频语境、术语表和语义结构，尽量保留人名、队名、赛事名和上下文关系。
-- **溢出修复**：面向剪辑软件字幕框，自动检查并修复过长字幕。
-- **一站式导出**：导出 SRT、VTT、ASS、新闻稿和质量报告。
-- **实时捕获工作流**：支持系统音频捕获场景，方便直播、会议或长素材拆段处理。
+AutoSub Workflow 是一款桌面端字幕生产工具，适合短视频、体育剪辑、访谈、会议录屏和多语言素材处理。它不是只做“语音转文字”，而是把字幕生产中最容易反复返工的环节放到同一条流程里：先转录，再清理，再按语义断句，随后翻译、检查字幕溢出，最后导出 SRT / VTT / ASS 和过程报告。
+
+如果你经常遇到这些问题，AutoSub 会更有用：
+
+- 多语言视频里，某些语言容易被漏听。
+- 云端转录能出文字，但断句和时间轴还需要整理。
+- 翻译后字幕太长，导入剪辑软件后经常自动换行。
+- 需要按 PR / 剪映等不同字幕样式控制单行字数。
+- 想把视频字幕、翻译、溢出修复和导出放在一个桌面流程里处理。
+
+## 核心功能
+
+- **转录**：支持云端转录，也支持 Full 版中的本地 faster-whisper 工作流。
+- **字幕优化**：清理重复片段、异常标点、幻觉文本和不自然分段。
+- **智能断句**：结合语义、停顿和长度限制，把转录结果整理成更适合观看的字幕。
+- **字幕翻译**：结合视频语境、术语表和语义结构，减少专有名词和上下文翻译错误。
+- **溢出修复**：按字幕样式和最大不换行字数拆分字幕，减少导入剪辑软件后的换行问题。
+- **实时捕获**：可捕获系统音频并分段转录、翻译和导出，适合直播、会议和长素材监听场景。
+- **导出**：支持 SRT、VTT、ASS、新闻稿、质量报告和运行日志。
+
+## 我们的优势
+
+### 1. 更重视多语言素材的漏听问题
+
+AutoSub 在任务配置里提供了多语言模式和空白区间补录。对于双语、混合语种、采访切换、体育解说等素材，普通转录容易在语言切换或长停顿后漏掉一段内容；AutoSub 会围绕这些空白区间做补录和补救，尽量降低漏听概率。
+
+![多语言模式与空白区间补录](AutoSub/docs/screenshots/multilingual-gap-fill.png)
+
+### 2. 为剪辑软件里的字幕换行做了专门适配
+
+很多工具把字幕翻译完就结束了，但真正导入剪辑软件后，问题才开始出现：一行太长、自动换行、遮挡画面、PR 和剪映表现不一致。AutoSub 提供 PR 模式 / 剪映模式、字号、最大不换行字数和自动溢出修复，让字幕更接近实际交付状态。
+
+![字幕样式与溢出修复流程](AutoSub/docs/screenshots/overflow-workflow.png)
+
+### 3. 可以做系统音频实时捕获
+
+AutoSub 支持捕获系统音频，把直播、会议、网页视频等声音按片段处理，并继续接入转录、翻译和导出流程。这个能力更偏工作流辅助：需要手动提交片段，也会存在一定延迟，但适合需要边听边整理字幕素材的场景。
+
+![实时捕获系统音频](AutoSub/docs/screenshots/realtime-capture.png)
+
+### 4. 全局设置集中管理
+
+云端转录、翻译、语境增强、优化断句、联网知识增强、溢出修复、本地 faster-whisper 和配置管理都集中在全局设置里。常用流程可以固定下来，不需要每次重新搭一套参数。
+
+![全局设置](AutoSub/docs/screenshots/global-settings.png)
 
 ## 下载哪个版本
-
-项目 Release 提供两个 Windows 版本：
 
 - **Cloud Lite 版**：体积更小，适合主要使用云端转录、翻译和断句的用户。内置 ffmpeg，但不包含本地 Whisper 推理组件。
 - **Full 版**：功能完整，适合需要本地 Whisper / faster-whisper 转录能力的用户。体积更大，但解压后组件更齐。
@@ -30,28 +74,14 @@ AutoSub Workflow 是一款面向短视频、体育剪辑、访谈和多语言内
 - [Cloud Lite 版](https://github.com/wzhou9721-blip/autosub-workflow/releases/tag/v1.0.0-cloud-lite)
 - [Full 版](https://github.com/wzhou9721-blip/autosub-workflow/releases/tag/v1.0.0)
 
-## 典型流程
+## 使用流程
 
-1. 导入视频或音频文件。
+1. 导入视频、音频或字幕文件。
 2. 选择云端或本地转录方式。
 3. 填写视频语境、源语言、目标语言和术语表。
-4. 按需开启 AI 优化、智能断句、翻译和溢出修复。
+4. 按需开启 AI 优化、智能断句、自动翻译和溢出修复。
 5. 运行任务并检查结果。
 6. 导出字幕文件、质量报告和运行日志。
-
-## 项目结构
-
-```text
-AutoSub/
-  app/                    应用源码
-  main.py                 桌面应用入口
-  autosub_cli.py          CLI 工作器入口
-  AutoSub.spec            Full 版打包配置
-  AutoSub_cloud_lite.spec Cloud Lite 版打包配置
-  requirements.txt        Windows / 开发环境依赖
-  config.example.json     不含密钥的示例配置
-  启动.bat                Windows 一键启动脚本
-```
 
 ## 本地开发
 
@@ -75,12 +105,6 @@ Copy-Item AutoSub\config.example.json AutoSub\config.json
 
 ```powershell
 .\.venv\Scripts\python.exe AutoSub\main.py
-```
-
-运行回归检查：
-
-```powershell
-.\.venv\Scripts\python.exe AutoSub\run_regression.py
 ```
 
 ## 打包

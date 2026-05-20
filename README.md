@@ -1,22 +1,68 @@
-# AutoSub Workflow
+<p align="center">
+  <img src="AutoSub/logo.ico" alt="AutoSub Logo" width="96">
+</p>
 
-English | [中文](README.zh-CN.md)
+<h1 align="center">AutoSub Workflow</h1>
 
-AutoSub Workflow is a desktop subtitle production workbench for creators who need more than a raw transcript. It connects transcription, cleanup, semantic splitting, translation, overflow repair, and export into one repeatable workflow.
+<p align="center">
+  A desktop subtitle workflow for transcription, semantic splitting, translation, overflow repair, and export.
+</p>
 
-## Why It Exists
+<p align="center">
+  English · <a href="README.zh-CN.md">中文</a> ·
+  <a href="https://github.com/wzhou9721-blip/autosub-workflow/releases/tag/v1.0.0-cloud-lite">Cloud Lite</a> ·
+  <a href="https://github.com/wzhou9721-blip/autosub-workflow/releases/tag/v1.0.0">Full</a>
+</p>
 
-Subtitle production often breaks across too many tools: one app for transcription, another prompt for cleanup, another pass for translation, and a final manual check for lines that overflow in the editor. AutoSub brings those steps into a single desktop flow so a video can move from source media to deliverable subtitle files with less hand stitching.
+![AutoSub cover](AutoSub/docs/screenshots/cover.png)
 
-## Highlights
+## Overview
 
-- **Cloud or local transcription** with Gladia, Whisper-compatible APIs, and local faster-whisper workflows.
-- **AI cleanup** for noisy transcript fragments, repeated phrases, punctuation issues, and suspicious segments.
-- **Semantic subtitle splitting** that uses meaning, pauses, and length limits to create more readable subtitles.
-- **Context-aware translation** with video context, glossary hints, and semantic maps.
-- **Overflow repair** for subtitle boxes used in editing workflows.
-- **Export-ready outputs** including SRT, VTT, ASS, production notes, reports, and logs.
-- **Realtime capture support** for system-audio capture scenarios.
+AutoSub Workflow is a desktop subtitle production tool for short videos, sports clips, interviews, meeting recordings, and multilingual media. It is designed for the whole subtitle pipeline, not just speech-to-text: transcribe, clean up, split by meaning, translate, repair overflow, and export subtitle files and reports.
+
+It is especially useful when:
+
+- Multilingual videos cause missing or skipped transcript sections.
+- Raw cloud transcription still needs cleanup, splitting, and review.
+- Translated subtitles become too long for editing software.
+- Different editors require different subtitle line-length behavior.
+- You want transcription, translation, overflow repair, and export in one repeatable desktop flow.
+
+## Core Features
+
+- **Transcription** with cloud providers or local faster-whisper in the Full build.
+- **AI cleanup** for repeated fragments, suspicious segments, punctuation issues, and rough transcript output.
+- **Semantic splitting** using meaning, pauses, and length limits to produce more readable subtitles.
+- **Context-aware translation** with video context, glossary hints, and semantic structure.
+- **Overflow repair** based on subtitle style and maximum no-wrap length.
+- **Realtime capture** for system audio workflows such as meetings, livestreams, and long media monitoring.
+- **Export** to SRT, VTT, ASS, production notes, quality reports, and runtime logs.
+
+## What Makes It Different
+
+### 1. Built for multilingual missing-audio recovery
+
+AutoSub includes multilingual mode and blank-interval gap filling. For bilingual interviews, mixed-language commentary, or sports clips with sudden language changes, it can revisit suspicious silent gaps and reduce missed speech.
+
+![Multilingual mode and gap filling](AutoSub/docs/screenshots/multilingual-gap-fill.png)
+
+### 2. Designed around editing-software subtitle limits
+
+Many tools stop after translation. AutoSub goes one step further: PR mode / Jianying mode, font size, maximum no-wrap length, and automatic overflow repair help reduce unwanted line breaks after subtitles are imported into editing software.
+
+![Subtitle style and overflow repair](AutoSub/docs/screenshots/overflow-workflow.png)
+
+### 3. Realtime system-audio capture
+
+AutoSub can capture system audio, split it into segments, then continue through transcription, translation, and export. This workflow requires manual segment submission and has some latency, but it is practical for livestreams, meetings, and monitoring long-running media.
+
+![Realtime system-audio capture](AutoSub/docs/screenshots/realtime-capture.png)
+
+### 4. Centralized global settings
+
+Cloud ASR, translation, context enhancement, optimization, semantic splitting, web knowledge enhancement, overflow repair, local faster-whisper, and config management are organized in one global settings area.
+
+![Global settings](AutoSub/docs/screenshots/global-settings.png)
 
 ## Releases
 
@@ -32,26 +78,12 @@ Download:
 
 ## Typical Workflow
 
-1. Import a video or audio file.
+1. Import a video, audio, or subtitle file.
 2. Choose cloud or local transcription.
 3. Add video context, source language, target language, and glossary hints.
-4. Enable cleanup, semantic splitting, translation, and overflow repair as needed.
+4. Enable AI cleanup, semantic splitting, translation, and overflow repair as needed.
 5. Run the task and review the result.
-6. Export subtitles, quality reports, and runtime logs.
-
-## Project Layout
-
-```text
-AutoSub/
-  app/                    Application source code
-  main.py                 Desktop app entry point
-  autosub_cli.py          CLI worker entry point
-  AutoSub.spec            Full build configuration
-  AutoSub_cloud_lite.spec Cloud Lite build configuration
-  requirements.txt        Windows/dev dependencies
-  config.example.json     Safe example config without API keys
-  启动.bat                Windows launcher
-```
+6. Export subtitle files, quality reports, and runtime logs.
 
 ## Development Setup
 
@@ -75,12 +107,6 @@ Run the development app:
 
 ```powershell
 .\.venv\Scripts\python.exe AutoSub\main.py
-```
-
-Run regression checks:
-
-```powershell
-.\.venv\Scripts\python.exe AutoSub\run_regression.py
 ```
 
 ## Packaging
