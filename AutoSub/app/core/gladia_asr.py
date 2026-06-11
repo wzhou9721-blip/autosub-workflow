@@ -15,6 +15,9 @@ from app.common.utils import apply_audio_preprocess, fix_timestamp_overlaps
 
 GLADIA_BASE_URL = "https://api.gladia.io"
 MAX_FILE_SIZE_MB = 500  # Gladia 单文件上传上限
+GLADIA_SINGLE_LANGUAGE_MODEL = "solaria-3"
+GLADIA_MULTILINGUAL_MODEL = "solaria-1"
+GLADIA_DEFAULT_LANGUAGE = "es"
 
 
 class GladiaError(Exception):
@@ -168,23 +171,27 @@ class GladiaASR:
         # 行为一致，模型视其为"之前说过的话"，在音频模糊或静音段容易续写成幻觉。
         # 视频语境信息由 LLM 优化阶段处理，不在 ASR 层注入。
 
-        # 语言配置
-        if language and language.lower() not in ("auto", ""):
-            languages = [language]
-            # 多语言模式：把次要语言也加入列表，Gladia 才能正确处理双语片段
-            if secondary_language and secondary_language != language:
+        is_multilingual = bool(secondary_language and secondary_language != language)
+        if is_multilingual:
+            selected_model = GLADIA_MULTILINGUAL_MODEL
+            languages = []
+            if language and language.lower() not in ("auto", ""):
+                languages.append(language)
+            if secondary_language and secondary_language.lower() != "auto":
                 languages.append(secondary_language)
-                print(f"[GladiaASR] 多语言模式：{languages}")
             payload["language_config"] = {
                 "languages": languages,
                 "code_switching": True
             }
         else:
-            # Auto 模式：开启 code_switching，Gladia 自动检测所有语言
+            selected_model = GLADIA_SINGLE_LANGUAGE_MODEL
+            selected_language = language if language and language.lower() not in ("auto", "") else GLADIA_DEFAULT_LANGUAGE
             payload["language_config"] = {
-                "languages": [],
-                "code_switching": True
+                "languages": [selected_language],
+                "code_switching": False
             }
+        payload["model"] = selected_model
+        print(f"[GladiaASR] 使用 Gladia 模型: {selected_model}, language_config={payload['language_config']}")
 
         # ── 转录调参 ────────────────────────────────────────────────────
         vocab_intensity = float(cfg.gladia_vocabulary_intensity.value)
