@@ -1509,10 +1509,8 @@ class OptimizationThread(QThread):
                                 raise TaskCancelledError("任务已取消")
                             split_done_count[0] = current
                             p = 50 + int((current / total) * 48)
-                            if total > 1 and current == total - 1:
-                                msg = "正在进行润色..."
-                            elif current == total:
-                                msg = "断句与润色完成"
+                            if current == total:
+                                msg = "断句完成"
                             else:
                                 msg = f"正在进行智能语义断句 ({current}/{total})..."
                             self.progress.emit(p, msg)
@@ -1542,7 +1540,7 @@ class OptimizationThread(QThread):
                 # - 如果仍然超时，则给出明确的“断句超时”提示，而不是“任务已取消”。
                 split_thread.join(timeout=900)
                 if split_thread.is_alive():
-                    logging.warning("[OptimizationThread] split_worker 超时未退出，强制继续（可能是断句/润色阶段卡住）")
+                    logging.warning("[OptimizationThread] split_worker 超时未退出，强制继续（可能是断句阶段卡住）")
                     split_error[0] = TaskCancelledError("断句超时")
 
                 if split_error[0]:
@@ -1573,10 +1571,7 @@ class OptimizationThread(QThread):
                         if not self._is_running:
                             raise TaskCancelledError("任务已取消")
                         p = 60 + int((current / total) * (100 - 60))
-                        if total > 1 and current == total - 1:
-                            msg = "正在进行润色..."
-                        else:
-                            msg = "正在进行智能语义断句..." if current < total else "断句与润色完成"
+                        msg = "正在进行智能语义断句..." if current < total else "断句完成"
                         self.progress.emit(p, msg)
                     final_segments = task_controller.start_split(optimized_segments, context, split_progress, task_scope=self._task_scope)
                 else:
@@ -1708,10 +1703,8 @@ class TranscriptionThread(QThread):
                             if not self._is_running:
                                 raise TaskCancelledError("任务已取消")
                             p = 85 + int((current / total) * 13)
-                            if total > 1 and current == total - 1:
-                                msg = "正在进行润色..."
-                            elif current == total:
-                                msg = "断句与润色完成"
+                            if current == total:
+                                msg = "断句完成"
                             else:
                                 msg = f"正在进行智能语义断句 ({current}/{total})..."
                             self.progress.emit(p, msg)
@@ -1729,10 +1722,10 @@ class TranscriptionThread(QThread):
                     raise TaskCancelledError("任务已取消")
 
                 seg_queue.put(optimized_segments)
-                # 与 OptimizationThread 一致：长视频断句+润色可能超过 2 分钟，用 900s 避免误判为“任务已取消”
+                # 与 OptimizationThread 一致：长视频断句可能超过 2 分钟，用 900s 避免误判为“任务已取消”
                 split_thread.join(timeout=900)
                 if split_thread.is_alive():
-                    logging.warning("[TranscriptionThread] split_worker 超时未退出，强制继续（可能是断句/润色阶段卡住）")
+                    logging.warning("[TranscriptionThread] split_worker 超时未退出，强制继续（可能是断句阶段卡住）")
                     split_error[0] = TaskCancelledError("断句超时")
 
                 if split_error[0]:
@@ -1769,10 +1762,7 @@ class TranscriptionThread(QThread):
                         if not self._is_running:
                             raise TaskCancelledError("任务已取消")
                         p = 85 + int((current / total) * (98 - 85))
-                        if total > 1 and current == total - 1:
-                            msg = "正在进行润色..."
-                        else:
-                            msg = "正在进行智能语义断句..." if current < total else "断句与润色完成"
+                        msg = "正在进行智能语义断句..." if current < total else "断句完成"
                         self.progress.emit(p, msg)
                     final_segments = task_controller.start_split(optimized_segments, context, split_progress, task_scope=self._task_scope)
                 else:

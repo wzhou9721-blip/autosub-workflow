@@ -17,7 +17,7 @@ GLADIA_BASE_URL = "https://api.gladia.io"
 MAX_FILE_SIZE_MB = 500  # Gladia 单文件上传上限
 GLADIA_SINGLE_LANGUAGE_MODEL = "solaria-3"
 GLADIA_MULTILINGUAL_MODEL = "solaria-1"
-GLADIA_DEFAULT_LANGUAGE = "es"
+GLADIA_SOLARIA_3_LANGUAGES = {"en", "fr", "de", "es", "it"}
 
 
 class GladiaError(Exception):
@@ -171,24 +171,29 @@ class GladiaASR:
         # 行为一致，模型视其为"之前说过的话"，在音频模糊或静音段容易续写成幻觉。
         # 视频语境信息由 LLM 优化阶段处理，不在 ASR 层注入。
 
+        is_auto_language = not language or language.lower() == "auto"
         is_multilingual = bool(secondary_language and secondary_language != language)
-        if is_multilingual:
+        use_solaria_3 = (
+            not is_auto_language
+            and not is_multilingual
+            and language.lower() in GLADIA_SOLARIA_3_LANGUAGES
+        )
+        if use_solaria_3:
+            selected_model = GLADIA_SINGLE_LANGUAGE_MODEL
+            payload["language_config"] = {
+                "languages": [language],
+                "code_switching": False
+            }
+        else:
             selected_model = GLADIA_MULTILINGUAL_MODEL
             languages = []
-            if language and language.lower() not in ("auto", ""):
+            if not is_auto_language:
                 languages.append(language)
             if secondary_language and secondary_language.lower() != "auto":
                 languages.append(secondary_language)
             payload["language_config"] = {
                 "languages": languages,
-                "code_switching": True
-            }
-        else:
-            selected_model = GLADIA_SINGLE_LANGUAGE_MODEL
-            selected_language = language if language and language.lower() not in ("auto", "") else GLADIA_DEFAULT_LANGUAGE
-            payload["language_config"] = {
-                "languages": [selected_language],
-                "code_switching": False
+                "code_switching": is_auto_language or is_multilingual
             }
         payload["model"] = selected_model
         print(f"[GladiaASR] 使用 Gladia 模型: {selected_model}, language_config={payload['language_config']}")

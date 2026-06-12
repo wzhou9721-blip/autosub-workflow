@@ -81,8 +81,8 @@ def test_build_overflow_contexts() -> None:
 def test_detect_weak_overflow_boundaries() -> None:
     assert LLMTranslator._has_weak_overflow_boundaries(
         [
-            {"text": "I'm not going to", "cn": "我不会去"},
-            {"text": "do that", "cn": "做那件事"},
+            {"text": "I started,", "cn": "我开始了，"},
+            {"text": "working again.", "cn": "继续工作。"},
         ]
     ) is True
     assert LLMTranslator._has_weak_overflow_boundaries(
@@ -112,8 +112,8 @@ def test_detect_cross_subtitle_translation_fragments() -> None:
             {"id": 137, "text": "in Tottenham Hotspur's Premier League history."},
         ],
         [
-            {"id": 136, "cn": "现在成为了助攻王"},
-            {"id": 137, "cn": "托特纳姆热刺英超历史上的"},
+            {"id": 136, "cn": "现在"},
+            {"id": 137, "cn": "的"},
         ],
     ) is True
     assert LLMTranslator._needs_continuation_reflection(
@@ -318,6 +318,42 @@ def test_splitter_heuristic_merge_does_not_exceed_max_words() -> None:
     merged = splitter._heuristic_merge(segments, max_cjk=20, max_en=20)
 
     assert len(merged) == 2
+
+
+def test_splitter_merges_weak_punctuation_fragment_forward() -> None:
+    splitter = SubtitleSplitter()
+    segments = [
+        {
+            "start": 0.0,
+            "end": 1.0,
+            "text": "That was the end of the match.",
+            "optimized_text": "That was the end of the match.",
+            "words": [],
+            "origin_idx": 1,
+        },
+        {
+            "start": 1.05,
+            "end": 1.35,
+            "text": "Working hard,",
+            "optimized_text": "Working hard,",
+            "words": [],
+            "origin_idx": 2,
+        },
+        {
+            "start": 1.4,
+            "end": 2.4,
+            "text": "they stayed in the game.",
+            "optimized_text": "they stayed in the game.",
+            "words": [],
+            "origin_idx": 3,
+        },
+    ]
+
+    merged = splitter._heuristic_merge(segments, max_cjk=28, max_en=20)
+
+    assert len(merged) == 2
+    assert merged[0]["text"] == "That was the end of the match."
+    assert merged[1]["text"] == "Working hard, they stayed in the game."
 
 
 def test_redistribute_origin_text_avoids_mid_word_splits() -> None:
@@ -573,6 +609,7 @@ def run_all() -> int:
         test_splitter_enforces_strict_english_max_words,
         test_splitter_skips_pause_split_for_tiny_fragments,
         test_splitter_heuristic_merge_does_not_exceed_max_words,
+        test_splitter_merges_weak_punctuation_fragment_forward,
         test_redistribute_origin_text_avoids_mid_word_splits,
         test_apply_translation_result,
         test_build_translation_failure,

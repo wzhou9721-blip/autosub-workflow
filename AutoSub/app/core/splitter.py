@@ -20,6 +20,8 @@ _LONG_PAUSE_SPLIT_SEC = 0.5
 _READABILITY_RESCUE_DURATION_SEC = 0.55
 _READABILITY_RESCUE_SLACK_EN = 12
 _READABILITY_RESCUE_SLACK_CJK = 12
+_WEAK_PUNCT_END_RE = re.compile(r'[,;:]["\')\]]*$')
+_STRONG_PUNCT_END_RE = re.compile(r'[.!?]["\')\]]*$')
 
 
 class SubtitleSplitter:
@@ -102,8 +104,8 @@ class SubtitleSplitter:
                     for chunk_idx, chunk_segs, _ in chunks_to_process
                 }
                 done_count = 0
-                # 总步数 = 断句块数 + 1（润色），便于 UI 显示“润色”阶段
-                total_steps = total_chunks + 2
+                # 总步数 = 断句块数 + 1（时间轴整理）
+                total_steps = total_chunks + 1
                 for future in as_completed(future_to_idx):
                     if progress_callback:
                         done_count += 1
@@ -134,7 +136,7 @@ class SubtitleSplitter:
                     pass
         else:
             # 串行：块数很少时避免线程开销
-            total_steps = total_chunks + 2
+            total_steps = total_chunks + 1
             for chunk_idx, (chunk_segs, head_overlap) in enumerate(chunks):
                 if chunk_idx < resume_start:
                     continue
@@ -197,9 +199,9 @@ class SubtitleSplitter:
         else:
             new_segments = self._align_timestamps(all_new_texts, all_words)
 
-        total_steps = total_chunks + 2
+        total_steps = total_chunks + 1
         if progress_callback:
-            progress_callback(total_chunks + 1, total_steps)
+            progress_callback(total_steps, total_steps)
 
         print(f"[Splitter] 断句完成，生成了 {len(new_segments)} 条新字幕。")
 
@@ -207,13 +209,6 @@ class SubtitleSplitter:
         new_segments = self._remove_zero_and_prefix_duplicates(new_segments)
         new_segments = self._attach_origin_index(new_segments, segments)
         new_segments = self._heuristic_merge(new_segments, max_cjk, max_en)
-
-        # 最后润色：修正大小写 + 补全句末标点（进度中单独显示“润色”阶段）
-        if progress_callback:
-            progress_callback(total_chunks + 1, total_steps)
-        new_segments = self._polish_segments(new_segments, model, task_scope)
-        if progress_callback:
-            progress_callback(total_steps, total_steps)
 
         return new_segments
 
@@ -227,7 +222,10 @@ class SubtitleSplitter:
         if not chunk_text.strip():
             return (chunk_idx, [])
         rule_texts = self._build_rule_based_chunk_texts(chunk_segs, max_cjk, max_en)
-        if not self._chunk_needs_llm(rule_texts, chunk_segs, max_cjk, max_en):
+        # Latin-script languages rely heavily on clause grammar; let the LLM
+        # choose boundaries unless we need the rule fallback.
+        prefer_llm = self._is_latin(chunk_text)
+        if not prefer_llm and not self._chunk_needs_llm(rule_texts, chunk_segs, max_cjk, max_en):
             return (chunk_idx, rule_texts)
         punct_density = sum(1 for c in chunk_text if c in '.!?,;:') / max(len(chunk_text), 1)
         if punct_density < 0.005:
@@ -482,23 +480,8 @@ class SubtitleSplitter:
         return latin_count > len(text or "") * 0.4
 
     @staticmethod
-    def _starts_with_weak_word(text: str) -> bool:
-        return bool(re.match(
-            r"^(and|or|but|to|of|in|on|at|for|with|that|which|who|whom|whose|because|if|when|while|than|as)\b",
-            (text or "").strip(),
-            re.IGNORECASE,
-        ))
-
-    @staticmethod
-    def _ends_with_weak_word(text: str) -> bool:
-        tokens = re.findall(r"[A-Za-z']+", (text or "").lower())
-        if not tokens:
-            return False
-        return tokens[-1] in {
-            "and", "or", "but", "to", "of", "in", "on", "at", "for", "with",
-            "that", "which", "who", "whom", "whose", "because", "if", "when",
-            "while", "than", "as",
-        }
+    def _starts_lowercase_latin(text: str) -> bool:
+        return bool(re.match(r"[a-zà-öø-ÿ]", (text or "").strip()))
 
     @staticmethod
     def _should_keep_pause_split(parts: list[str]) -> bool:
@@ -512,10 +495,7 @@ class SubtitleSplitter:
 
             if idx < len(parts) - 1:
                 next_part = parts[idx + 1]
-                if (
-                    SubtitleSplitter._ends_with_weak_word(stripped)
-                    or SubtitleSplitter._starts_with_weak_word(next_part)
-                ):
+                if SubtitleSplitter._starts_lowercase_latin(next_part):
                     return False
 
             if SubtitleSplitter._has_terminal_punctuation(stripped):
@@ -707,11 +687,11 @@ class SubtitleSplitter:
 
 2. **Segment size**:
    - CJK: target ~{max_cjk} chars, NEVER exceed {max_cjk}. Short segments are fine.
-   - Latin: target ~{max_en} words, NEVER exceed {max_en}. Short segments are fine.
+   - Latin: target ~{max_en} words, but grammar comes first. Slightly exceed the target rather than leaving an unfinished clause or phrase alone.
 
-3. **Where to split**: At clause breaks, topic shifts, sentence endings. Do NOT isolate fragments (< 5 words / < 8 CJK chars) — merge them with adjacent text. Do NOT end a segment with a dangling connector (so, and, but, because, if, when, although, while, though). Never break fixed phrases, proper nouns, or named entities.
+3. **Where to split**: At complete clause breaks, topic shifts, and sentence endings. ASR punctuation is a weak hint, not a hard boundary. Do NOT isolate very short fragments (< 5 words / < 8 CJK chars) when they clearly depend on adjacent text. Never break fixed phrases, proper nouns, or named entities.
 
-4. **Semantic guidance**: Use the semantic map to recognize speaker turns, questions, answers, explanations, and references. Prefer boundaries at real turn/topic changes. Keep short answers, follow-up clauses, and pronoun references with the line they depend on when the length limit allows.
+4. **Semantic guidance**: Use the semantic map to recognize speaker turns, questions, answers, explanations, and references. Prefer boundaries at real turn/topic changes. Keep short answers, follow-up clauses, and pronoun references with the line they depend on when the length limit allows. Let meaning override suspicious ASR punctuation.
 
 5. **Output**: ONLY the text with <br> inserted. No explanation, no markdown, no numbering.
 {scene_rules}
@@ -834,14 +814,15 @@ Output: The committee has decided to postpone the vote until next Monday<br>beca
         results = []
         for text in texts:
             if self._is_latin(text):
-                results.extend(self._split_by_max_words(text, max_en))
+                results.extend(self._split_by_max_words(text, max_en + _READABILITY_RESCUE_SLACK_EN))
             else:
                 results.extend(self._split_by_max_chars(text, max_cjk))
         return [t for t in results if t]
 
     def _split_by_max_words(self, text, max_en):
         words = re.findall(r'\S+', text)
-        # 用户设置的最大单词数应视为硬上限。
+        # Latin-script languages use a soft target upstream; this method only
+        # enforces the final hard cap passed by _enforce_length_limit().
         if len(words) <= max_en:
             return [text]
 
@@ -1248,81 +1229,6 @@ Output: The committee has decided to postpone the vote until next Monday<br>beca
         return result
 
     # ──────────────────────────────────────────────────────────────
-    # 字幕润色：修正大小写 + 补全句末标点
-    # ──────────────────────────────────────────────────────────────
-
-    def _polish_segments(self, segments, model, task_scope=None):
-        """
-        断句完成后的最后一步润色：
-        1. 修正句内错误大写 —— Whisper 每段首词大写，合并后可能残留在句中
-           (如 "Was There A difficult Balance" → "Was there a difficult balance")
-        2. 补全句末标点 —— 缺少句号/问号/感叹号时自动补上
-        仅修改大小写和句末标点，严禁改词、加词、删词。
-        """
-        if not segments:
-            return segments
-
-        batch_size = 40
-        system_prompt = """You are a subtitle formatter. Fix ONLY these two things:
-
-1. **Capitalization**:
-   a) Mid-sentence words: Lowercase any word that is incorrectly capitalized in the MIDDLE of a subtitle. Keep proper nouns, acronyms, and the word "I" capitalized.
-   b) First word of each subtitle:
-      - CAPITALIZE it if the PREVIOUS subtitle ends with sentence-terminating punctuation (. ? !) or if it is subtitle [0].
-      - LOWERCASE it if the PREVIOUS subtitle has NO terminal punctuation (i.e. it is a mid-sentence continuation), unless it is a proper noun, acronym, or "I".
-   This ensures continuation lines (split only due to length) start lowercase.
-
-2. **Terminal punctuation**: Add a sentence-ending mark (. or ? or !) at the end if missing.
-   - Use ? if the subtitle is a question
-   - Use ! if it is an exclamation
-   - Use . for everything else
-   - If the subtitle clearly continues into the next subtitle (mid-sentence fragment), OMIT terminal punctuation — do NOT add a period.
-
-STRICT RULES:
-- Do NOT change, add, reorder, or remove any words.
-- Do NOT add commas or other mid-sentence punctuation.
-- Keep the [ID] prefix exactly as given.
-- Output ONLY the corrected lines, one per line, no explanations."""
-
-        for batch_start in range(0, len(segments), batch_size):
-            batch = segments[batch_start:batch_start + batch_size]
-            lines = "\n".join(
-                f"[{i}] {seg.get('text', '')}"
-                for i, seg in enumerate(batch)
-            )
-            try:
-                result = llm_manager.call_llm(
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user",   "content": f"Fix these subtitles:\n{lines}"}
-                    ],
-                    model=model,
-                    temperature=0,
-                    config_prefix="optimize",
-                    max_tokens=3000,
-                    task_scope=task_scope
-                )
-                for line in result.splitlines():
-                    line = line.strip()
-                    if not line or ']' not in line:
-                        continue
-                    try:
-                        idx_str, text = line.split(']', 1)
-                        idx = int(idx_str.replace('[', '').strip())
-                        if 0 <= idx < len(batch):
-                            new_text = text.strip()
-                            if new_text:
-                                batch[idx]['text'] = new_text
-                                batch[idx]['optimized_text'] = new_text
-                    except Exception:
-                        continue
-            except Exception as e:
-                print(f"[Splitter] 润色步骤失败（跳过）: {e}")
-
-        print(f"[Splitter] 润色完成。")
-        return segments
-
-    # ──────────────────────────────────────────────────────────────
     # 时间戳附加 + 启发式合并
     # ──────────────────────────────────────────────────────────────
 
@@ -1401,7 +1307,32 @@ STRICT RULES:
                     len(re.findall(r'\w+', next_seg["text"])) < 5 if is_en_n
                     else len(next_seg["text"]) < 8
                 )
-                if not (curr_tiny or next_tiny):
+                latin_bridge = False
+                latin_wait_for_next = False
+                if is_en_c and is_en_n:
+                    curr_word_count = len(re.findall(r'\w+', curr["text"]))
+                    next_word_count = len(re.findall(r'\w+', next_seg["text"]))
+                    seg_gap = next_seg.get('start', 0) - curr.get('end', 0)
+                    latin_bridge = self._latin_fragment_wants_next(
+                        curr["text"],
+                        next_seg["text"],
+                        curr_word_count,
+                        next_word_count,
+                        max_en,
+                        seg_gap,
+                    )
+                    latin_wait_for_next = (
+                        i + 2 < len(segments)
+                        and self._latin_fragment_prefers_following(
+                            curr["text"],
+                            next_seg["text"],
+                            curr_word_count,
+                            next_word_count,
+                            max_en,
+                            seg_gap,
+                        )
+                    )
+                if not (curr_tiny or (next_tiny and not latin_wait_for_next) or latin_bridge):
                     merged.append(curr)
                     i += 1
                     continue
@@ -1420,17 +1351,24 @@ STRICT RULES:
                     next_dur = max(0.0, next_seg.get('end', 0) - next_seg.get('start', 0))
                     tiny_curr = curr_words <= 3 and curr_dur <= _READABILITY_RESCUE_DURATION_SEC
                     tiny_next = next_words <= 3 and next_dur <= _READABILITY_RESCUE_DURATION_SEC
+                    latin_bridge = self._latin_fragment_wants_next(
+                        curr['text'], next_seg['text'], curr_words, next_words, max_en, gap
+                    )
+                    latin_wait_for_next = (
+                        i + 2 < len(segments)
+                        and self._latin_fragment_prefers_following(
+                            curr['text'], next_seg['text'], curr_words, next_words, max_en, gap
+                        )
+                    )
                     if curr_words + next_words <= max_en:
                         # 只在以下更严格的条件下才合并：
                         # 1. 某一侧极短（< min_en 词）
-                        if curr_words < min_en or next_words < min_en:
+                        if (curr_words < min_en or next_words < min_en) and not latin_wait_for_next:
                             should_merge = True
-                        # 2. 下一段以连词/介词开头（明显是上句的延续）
-                        elif re.match(r'^(and|or|but|to|of|in|on|at|for|with|that|which|who)\b',
-                                      next_seg['text'].strip(), re.IGNORECASE):
+                        elif latin_bridge:
                             should_merge = True
-                        # 3. 极短片段 + 极小间隔（几乎可以认定是同一句）
-                        elif next_words <= 2 and gap < 0.15:
+                        # 2. 极短片段 + 极小间隔（几乎可以认定是同一句）
+                        elif next_words <= 2 and gap < 0.15 and not latin_wait_for_next:
                             should_merge = True
                         # 注意：移除了"末尾无标点就合并"的规则，ASR 输出本来就少标点
                     else:
@@ -1440,9 +1378,11 @@ STRICT RULES:
                         if curr_words <= 3 and curr_words + next_words <= max_en:
                             should_merge = True
                         elif (
-                            (tiny_curr or tiny_next)
+                            (tiny_curr or (tiny_next and not latin_wait_for_next))
                             and curr_words + next_words <= max_en + _READABILITY_RESCUE_SLACK_EN
                         ):
+                            should_merge = True
+                        elif latin_bridge:
                             should_merge = True
 
                 else:
@@ -1454,9 +1394,6 @@ STRICT RULES:
                     tiny_next = next_len <= 4 and next_dur <= _READABILITY_RESCUE_DURATION_SEC
                     if curr_len + next_len <= max_cjk:
                         if curr_len < min_cjk or next_len < min_cjk:
-                            should_merge = True
-                        elif re.match(r'^(的|了|和|与|在|对|向|把|将|被|而|但|或|就|才)',
-                                      next_seg['text'].strip()):
                             should_merge = True
                         elif next_len <= 2 and gap < 0.15:
                             should_merge = True
@@ -1508,6 +1445,47 @@ STRICT RULES:
     def _strip_punctuation(text: str) -> str:
         """移除标点符号，让断句 LLM 完全依赖语义而非句号来判断断点。保留空格和字母数字。"""
         return re.sub(r'[^\w\s]', '', text, flags=re.UNICODE).strip()
+
+    @staticmethod
+    def _latin_fragment_wants_next(curr_text: str, next_text: str,
+                                   curr_words: int, next_words: int,
+                                   max_en: int, gap: float) -> bool:
+        """
+        Rescue short Latin-script fragments using only generic punctuation cues.
+        """
+        if gap >= 0.6:
+            return False
+        if curr_words + next_words > max_en + _READABILITY_RESCUE_SLACK_EN:
+            return False
+
+        curr = (curr_text or "").strip()
+        nxt = (next_text or "").strip()
+        if not curr or not nxt:
+            return False
+        if _STRONG_PUNCT_END_RE.search(curr):
+            return False
+
+        return bool(_WEAK_PUNCT_END_RE.search(curr) and curr_words <= max(8, max_en // 2))
+
+    @staticmethod
+    def _latin_fragment_prefers_following(curr_text: str, next_text: str,
+                                          curr_words: int, next_words: int,
+                                          max_en: int, gap: float) -> bool:
+        """
+        Avoid pulling a weakly punctuated short fragment into the previous line
+        when another following line is available.
+        """
+        if gap >= 0.6:
+            return False
+        if curr_words + next_words > max_en + _READABILITY_RESCUE_SLACK_EN:
+            return False
+
+        nxt = (next_text or "").strip()
+        if not nxt:
+            return False
+        if next_words > max(8, max_en // 2):
+            return False
+        return bool(_WEAK_PUNCT_END_RE.search(nxt))
 
     def _is_latin(self, text):
         """判断文本是否属于拉丁语系（英/西/法/葡/意/德等），用于选择单词数还是字符数限制。"""

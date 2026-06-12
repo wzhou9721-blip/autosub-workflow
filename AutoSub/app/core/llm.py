@@ -435,35 +435,6 @@ class LLMTranslator:
     _OVERFLOW_CONTEXT_ITEMS = 2
     _OVERFLOW_CONTEXT_MAX_CHARS = 80
     _OVERFLOW_BATCH_SIZE = 4
-    _WEAK_BOUNDARY_END_TOKENS_EN = {
-        "and", "but", "or", "so", "that", "if", "when", "while", "because",
-        "to", "of",
-    }
-    _WEAK_BOUNDARY_START_TOKENS_EN = {
-        "and", "but", "or", "so", "then", "because", "if", "when",
-        "while", "that", "to", "of",
-    }
-    _CONTINUATION_START_TOKENS_EN = {
-        "and", "but", "or", "so", "then", "because", "if", "when", "while",
-        "that", "which", "who", "whose", "where", "after", "before", "until",
-        "since", "as", "than", "to", "of", "in", "on", "at", "for", "from",
-        "with", "by", "into", "onto", "over", "under",
-    }
-    _WEAK_BOUNDARY_END_TOKENS_CJK = (
-        "的", "了", "吗", "呢", "啊", "吧", "和", "但", "而", "把", "被",
-        "也", "都", "又", "还", "再", "就", "才", "并",
-    )
-    _WEAK_BOUNDARY_START_TOKENS_CJK = (
-        "的", "了", "吗", "呢", "啊", "吧", "而", "但", "和", "把", "被",
-        "也", "都", "又", "还", "再", "就", "才", "并", "在",
-    )
-    _DANGLING_TRANSLATION_END_TOKENS_CJK = (
-        "的", "地", "得", "上的", "中的", "里的", "下的", "前的", "后的",
-    )
-    _TINY_TRANSLATION_FRAGMENTS_CJK = (
-        "在", "于", "从", "向", "对", "给", "把", "被", "和", "与", "并",
-        "也", "都", "又", "还", "就", "才", "而", "但", "的",
-    )
 
     def __init__(self, task_scope: str = None):
         # 不再缓存配置值，改为动态读取，确保运行时修改能即时生效
@@ -531,23 +502,22 @@ class LLMTranslator:
 
     @classmethod
     def _segment_has_weak_end(cls, text: str) -> bool:
+        raw = (text or "").strip()
+        if re.search(r'[,;:，；：]["\')\]]*$', raw):
+            return True
         stripped = cls._strip_boundary_punctuation(text, leading=False)
         if not stripped:
             return False
-        if any(stripped.endswith(token) for token in cls._WEAK_BOUNDARY_END_TOKENS_CJK):
-            return True
-        match = re.search(r"([A-Za-z']+)$", stripped.lower())
-        return bool(match and match.group(1) in cls._WEAK_BOUNDARY_END_TOKENS_EN)
+        cjk_chars = re.findall(r"[\u3400-\u4dbf\u4e00-\u9fff]", stripped)
+        return 0 < len(cjk_chars) <= 1
 
     @classmethod
     def _segment_has_weak_start(cls, text: str) -> bool:
         stripped = cls._strip_boundary_punctuation(text, leading=True)
         if not stripped:
             return False
-        if any(stripped.startswith(token) for token in cls._WEAK_BOUNDARY_START_TOKENS_CJK):
-            return True
-        match = re.match(r"([A-Za-z']+)", stripped.lower())
-        return bool(match and match.group(1) in cls._WEAK_BOUNDARY_START_TOKENS_EN)
+        cjk_chars = re.findall(r"[\u3400-\u4dbf\u4e00-\u9fff]", stripped)
+        return 0 < len(cjk_chars) <= 1
 
     @classmethod
     def _segment_is_tiny_cjk_fragment(cls, text: str) -> bool:
@@ -587,11 +557,7 @@ class LLMTranslator:
         if re.search(r'[。！？.!?…]["\')\]]*$', left):
             return False
 
-        match = re.match(r"([A-Za-z']+)", right)
-        if not match:
-            return False
-        token = match.group(1).lower()
-        return token in cls._CONTINUATION_START_TOKENS_EN or token[:1].islower()
+        return bool(re.match(r"[a-zà-öø-ÿ]", right))
 
     @classmethod
     def _translation_has_dangling_modifier(cls, text: str) -> bool:
@@ -601,7 +567,11 @@ class LLMTranslator:
         stripped = cls._strip_boundary_punctuation(raw, leading=False)
         if not stripped:
             return False
-        return any(stripped.endswith(token) for token in cls._DANGLING_TRANSLATION_END_TOKENS_CJK)
+        cjk_chars = re.findall(r"[\u3400-\u4dbf\u4e00-\u9fff]", stripped)
+        if cjk_chars:
+            return len(cjk_chars) <= 2
+        latin_words = re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ']+", stripped)
+        return 0 < len(latin_words) <= 2
 
     @classmethod
     def _translation_is_tiny_fragment(cls, text: str) -> bool:
@@ -610,7 +580,10 @@ class LLMTranslator:
         if not stripped:
             return False
         cjk_chars = re.findall(r"[\u3400-\u4dbf\u4e00-\u9fff]", stripped)
-        return 0 < len(cjk_chars) <= 2 and stripped in cls._TINY_TRANSLATION_FRAGMENTS_CJK
+        if cjk_chars:
+            return len(cjk_chars) <= 2
+        latin_words = re.findall(r"[A-Za-zÀ-ÖØ-öø-ÿ']+", stripped)
+        return 0 < len(latin_words) <= 2
 
     @classmethod
     def _needs_continuation_reflection(
@@ -867,18 +840,17 @@ class LLMTranslator:
             target_lang_style = (
                 '\n4. Use natural Chinese word order inside each subtitle, but do not borrow or move meaning across subtitle boundaries unless the source is explicitly unfinished.'
                 '\n5. Keep subtitle boundaries stable. Do not redistribute neighboring source text just to make the Chinese smoother.'
-                '\n6. Never leave dangling modifiers or stranded fragments such as "...的", "...上的", or a lone function word/preposition in a subtitle.'
-                '\n7. English clause reordering for Chinese is mandatory:'
-                '\n   - Relative clauses: translate "the X that/which/who ..." as "...的X", or split into two short Chinese clauses. Do NOT keep the English order "X，那个...".'
-                '\n   - Time/condition/concession clauses: move when/if/because/although/after/before clauses before the main action when Chinese reads better, e.g. "如果/当/因为/虽然...，...".'
-                '\n   - Purpose/result clauses: render "so that / in order to / which means" as "为了... / 这样... / 这意味着...", placed where natural in Chinese.'
-                '\n   - Long noun phrases: unpack them into natural Chinese modifier-before-noun order; avoid stacked literal phrases like "在...上的...的...".'
-                '\n8. Avoid English-shaped Chinese. Bad: "我们需要解决的问题是它很复杂"; Better: "这个问题很复杂，我们需要解决它" or "我们需要解决这个复杂的问题".'
+                '\n6. Avoid obvious unfinished translation fragments.'
             )
         elif "japanese" in target_lang_name.lower() or target_lang_name == "Japanese":
             target_lang_style = "\n4. Use natural Japanese SOV word order."
         elif "korean" in target_lang_name.lower() or target_lang_name == "Korean":
             target_lang_style = "\n4. Use natural Korean SOV word order."
+
+        source_structure_guidance = (
+            '\n9. ASR commas and periods can be wrong. If punctuation conflicts with meaning, '
+            'translate according to the source meaning and use natural target-language punctuation.'
+        )
 
         def build_prompt(strict: bool):
             conservative_block = ""
@@ -904,8 +876,8 @@ Semantic Map: {semantic_context or "None"}
 1. Translate faithfully first, naturally second. Do not infer unstated meaning.
 2. Keep names, places, and terms consistent with context_before_translated.
 3. Keep each subtitle aligned to its own source line. Do NOT redistribute content across neighboring subtitles unless the source is explicitly unfinished and the meaning is obvious.
-4. Use the Semantic Map to resolve speaker turns, references, and topic flow. It is guidance only; never translate or copy text from the map as source content.{conservative_block}{target_lang_style}
-7. Preserve the original tone and punctuation rhythm. Sentence-ending punctuation (periods, question marks, exclamation marks, ellipses) in the source MUST appear in the translation. Never merge multiple sentences into one unpunctuated run-on.
+4. Use the Semantic Map to resolve speaker turns, references, and topic flow. It is guidance only; never translate or copy text from the map as source content.{conservative_block}{target_lang_style}{source_structure_guidance}
+7. Preserve the original tone and punctuation rhythm when it does not conflict with grammar. Never merge multiple sentences into one unpunctuated run-on.
 8. Low-confidence IDs: {suspicious_ids if suspicious_ids else "None"}.
 
 # Example
@@ -927,8 +899,8 @@ Semantic Map: {semantic_context or "None"}
 1. Translate faithfully first, naturally second. Do not infer unstated meaning.
 2. Keep names, places, and terms consistent with previous translations.
 3. Keep each subtitle aligned to its own source line. Do NOT redistribute content across neighboring subtitles unless the source is explicitly unfinished and the meaning is obvious.
-4. Use the Semantic Map to resolve speaker turns, references, and topic flow. It is guidance only; never translate or copy text from the map as source content.{conservative_block}{target_lang_style}
-7. Preserve the original tone and punctuation rhythm. Sentence-ending punctuation in the source MUST appear in the translation. Never merge multiple sentences into one unpunctuated run-on.
+4. Use the Semantic Map to resolve speaker turns, references, and topic flow. It is guidance only; never translate or copy text from the map as source content.{conservative_block}{target_lang_style}{source_structure_guidance}
+7. Preserve the original tone and punctuation rhythm when it does not conflict with grammar. Never merge multiple sentences into one unpunctuated run-on.
 8. Low-confidence IDs: {suspicious_ids if suspicious_ids else "None"}.
 """
         user_payload = json.dumps({
@@ -1146,9 +1118,8 @@ Review criteria:
 - Accuracy: Does the translation faithfully convey the source meaning?
 - Naturalness: Does it read like native {target_lang_name}, not translated text?
 - Consistency: Are names, terms, and tone consistent with context?
-- Punctuation: Sentence-ending punctuation must be preserved.
-- Chinese clause order: if the target language is Chinese, actively fix English-shaped clause order. Relative clauses should become "...的X" or short separated Chinese clauses; time/condition/cause/concession clauses should usually move before the main action; long noun phrases should be unpacked into natural Chinese modifier-before-noun order.
-- Cross-subtitle flow: if adjacent subtitles form one sentence, the translations must read naturally when concatenated, but do NOT borrow meaning from neighboring subtitles just to make one line smoother. Avoid dangling modifiers or orphaned fragments such as "...的", "...上的", or lone function words.
+- Punctuation: Follow the source rhythm when it is reliable; use natural {target_lang_name} punctuation when ASR punctuation looks suspicious.
+- Cross-subtitle flow: if adjacent subtitles form one sentence, the translations must read naturally when concatenated, but do NOT borrow meaning from neighboring subtitles just to make one line smoother. Avoid obvious unfinished translation fragments.
 
 Output ONLY compressed JSON: {{"translations":[{{"id":1,"cn":"improved translation"}}]}}
 No explanation, no markdown."""
@@ -1552,7 +1523,7 @@ Return JSON array only:
 3. Each "cn" fragment must be <= {max_chars} characters.
 4. Keep the "text" fragments and "cn" fragments aligned in order.
 5. Prefer complete sentences, clauses, or phrase groups.
-6. Never leave dangling fragments at a boundary, especially conjunctions, prepositions, articles, particles, lone pronouns, or tiny trailing words.
+6. Avoid obvious unfinished fragments at segment boundaries.
 7. If the feedback says the previous result was invalid, regenerate the full JSON array from scratch and fix every listed problem.
 8. No markdown. No explanation. JSON only.
 {context_block}{feedback_block}
@@ -1643,7 +1614,7 @@ Return JSON array only:
 5. Each "cn" fragment must be <= {max_chars} characters.
 6. Keep the "text" fragments and "cn" fragments aligned in order.
 7. Prefer complete sentences, clauses, or phrase groups.
-8. Never leave dangling fragments at a boundary, especially conjunctions, prepositions, articles, particles, lone pronouns, or tiny trailing words.
+8. Avoid obvious unfinished fragments at segment boundaries.
 9. No markdown. No explanation. JSON only.
 
 # Input items
